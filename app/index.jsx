@@ -1,19 +1,27 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Keyboard, TouchableWithoutFeedback, StatusBar } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
-import ThemeSelector from '../components/ThemeSelector'; // <-- Import your new component
+import ThemeSelector from '../components/ThemeSelector';
+import { useTimerEngine } from '../hooks/useTimerEngine';
 
 export default function AmbientScreen() {
   useKeepAwake();
 
   const [currentStep, setCurrentStep] = useState('input');
-  
   const [hours, setHours] = useState('00');
   const [minutes, setMinutes] = useState('00');
   const [seconds, setSeconds] = useState('00');
-  
-  // We will store the chosen theme here eventually
   const [activeTheme, setActiveTheme] = useState(null); 
+
+  // Unconditional top-level instantiation. Ticks only when step is 'active'
+  const isEngineActive = currentStep === 'active';
+  const { formattedTimeLeft, progress } = useTimerEngine(
+    hours, 
+    minutes, 
+    seconds, 
+    isEngineActive, 
+    () => { console.log("Session completed."); }
+  );
 
   const handleTextChange = (text, setter) => {
     const cleanNum = text.replace(/[^0-9]/g, '');
@@ -36,7 +44,7 @@ export default function AmbientScreen() {
 
   const isTimeValid = totalSeconds > 0;
 
-  // ROUTING LOGIC
+  // ROUTING RENDER CONDITIONS
   if (currentStep === 'theme') {
     return (
       <ThemeSelector 
@@ -52,11 +60,18 @@ export default function AmbientScreen() {
   if (currentStep === 'active') {
     return (
       <View style={[styles.container, styles.activeCanvas]}>
-        <Text style={styles.ambientPlaceholderText}>
-          Workspace: {hours}:{minutes}:{seconds} | Theme: {activeTheme}
-        </Text>
+        <StatusBar hidden />
+        
+        <View style={styles.ambientInfoWrapper}>
+          <Text style={styles.themeDisplayTag}>
+            ENVIRONMENT: {activeTheme ? activeTheme.toUpperCase() : ''}
+          </Text>
+          <Text style={styles.liveClockDisplay}>{formattedTimeLeft}</Text>
+          <Text style={styles.progressSubtext}>Progress: {progress.toFixed(2)}%</Text>
+        </View>
+
         <TouchableOpacity style={styles.exitButton} onPress={() => setCurrentStep('input')}>
-          <Text style={styles.exitButtonText}>EXIT ENVIRONMENT</Text>
+          <Text style={styles.exitButtonText}>END SESSION</Text>
         </TouchableOpacity>
       </View>
     );
@@ -136,7 +151,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   activeCanvas: {
-    backgroundColor: '#0A050A',
+    backgroundColor: '#050505',
   },
   titleText: {
     color: '#FFFFFF',
@@ -200,11 +215,28 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 2,
   },
-  ambientPlaceholderText: {
-    color: '#666666',
-    fontSize: 14,
-    letterSpacing: 1,
-    marginBottom: 24,
+  ambientInfoWrapper: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  themeDisplayTag: {
+    color: '#444444',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 2,
+    marginBottom: 16,
+  },
+  liveClockDisplay: {
+    color: '#FFFFFF',
+    fontSize: 48,
+    fontWeight: '200',
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  progressSubtext: {
+    color: '#333333',
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   exitButton: {
     paddingVertical: 10,
