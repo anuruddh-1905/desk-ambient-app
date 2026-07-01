@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Keyboard, Touchabl
 import { useKeepAwake } from 'expo-keep-awake';
 import ThemeSelector from '../components/ThemeSelector';
 import SunsetCanvas from '../components/SunsetCanvas';
+import EclipseCanvas from '../components/EclipseCanvas'; // Add this line
 import { useTimerEngine } from '../hooks/useTimerEngine';
 
 export default function AmbientScreen() {
@@ -65,8 +66,12 @@ export default function AmbientScreen() {
       <View style={[styles.container, styles.activeCanvas]}>
         <StatusBar hidden />
         
-        {/* Render the graphic layer engine beneath our controls */}
-        <SunsetCanvas progress={progress} isCompleted={isCompleted} />
+        {/* Render the graphic layer engine chosen dynamically by the user */}
+        {activeTheme === 'lunar' ? (
+          <EclipseCanvas progress={progress} isCompleted={isCompleted} />
+        ) : (
+          <SunsetCanvas progress={progress} isCompleted={isCompleted} />
+        )}
         
         {/* Absolute distraction-free layout view layer */}
         <View style={styles.minimalExitWrapper}>
