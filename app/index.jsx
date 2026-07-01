@@ -2,20 +2,22 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Keyboard, TouchableWithoutFeedback, StatusBar } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import ThemeSelector from '../components/ThemeSelector';
+import SunsetCanvas from '../components/SunsetCanvas';
 import { useTimerEngine } from '../hooks/useTimerEngine';
 
 export default function AmbientScreen() {
   useKeepAwake();
 
+  // 1. STATE INITIALIZATIONS
   const [currentStep, setCurrentStep] = useState('input');
   const [hours, setHours] = useState('00');
   const [minutes, setMinutes] = useState('00');
   const [seconds, setSeconds] = useState('00');
   const [activeTheme, setActiveTheme] = useState(null); 
 
-  // Unconditional top-level instantiation. Ticks only when step is 'active'
+  // 2. UNCONDITIONAL TOP-LEVEL HOOK INVOCATION
   const isEngineActive = currentStep === 'active';
-  const { formattedTimeLeft, progress } = useTimerEngine(
+  const { progress, isCompleted } = useTimerEngine(
     hours, 
     minutes, 
     seconds, 
@@ -23,6 +25,7 @@ export default function AmbientScreen() {
     () => { console.log("Session completed."); }
   );
 
+  // 3. INPUT UTILITY OPERATIONS
   const handleTextChange = (text, setter) => {
     const cleanNum = text.replace(/[^0-9]/g, '');
     if (cleanNum.length <= 2) {
@@ -44,7 +47,7 @@ export default function AmbientScreen() {
 
   const isTimeValid = totalSeconds > 0;
 
-  // ROUTING RENDER CONDITIONS
+  // 4. SCREEN ROUTING CONDITIONS
   if (currentStep === 'theme') {
     return (
       <ThemeSelector 
@@ -62,21 +65,20 @@ export default function AmbientScreen() {
       <View style={[styles.container, styles.activeCanvas]}>
         <StatusBar hidden />
         
-        <View style={styles.ambientInfoWrapper}>
-          <Text style={styles.themeDisplayTag}>
-            ENVIRONMENT: {activeTheme ? activeTheme.toUpperCase() : ''}
-          </Text>
-          <Text style={styles.liveClockDisplay}>{formattedTimeLeft}</Text>
-          <Text style={styles.progressSubtext}>Progress: {progress.toFixed(2)}%</Text>
+        {/* Render the graphic layer engine beneath our controls */}
+        <SunsetCanvas progress={progress} isCompleted={isCompleted} />
+        
+        {/* Absolute distraction-free layout view layer */}
+        <View style={styles.minimalExitWrapper}>
+          <TouchableOpacity style={styles.exitButton} onPress={() => setCurrentStep('input')}>
+            <Text style={styles.exitButtonText}>END SESSION</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.exitButton} onPress={() => setCurrentStep('input')}>
-          <Text style={styles.exitButtonText}>END SESSION</Text>
-        </TouchableOpacity>
       </View>
     );
   }
 
+  // SCREEN 1: INPUT TIMING MANAGER RENDER
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
@@ -215,28 +217,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 2,
   },
-  ambientInfoWrapper: {
+  minimalExitWrapper: {
+    position: 'absolute',
+    bottom: 40,
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 40,
-  },
-  themeDisplayTag: {
-    color: '#444444',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 2,
-    marginBottom: 16,
-  },
-  liveClockDisplay: {
-    color: '#FFFFFF',
-    fontSize: 48,
-    fontWeight: '200',
-    letterSpacing: 2,
-    marginBottom: 8,
-  },
-  progressSubtext: {
-    color: '#333333',
-    fontSize: 12,
-    letterSpacing: 0.5,
+    zIndex: 99,
   },
   exitButton: {
     paddingVertical: 10,
@@ -244,6 +230,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 6,
+    zIndex: 10,
   },
   exitButtonText: {
     color: 'rgba(255,255,255,0.3)',
