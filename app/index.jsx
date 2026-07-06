@@ -1,22 +1,39 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Keyboard, TouchableWithoutFeedback, StatusBar } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TextInput, 
+  TouchableOpacity, 
+  Keyboard, 
+  TouchableWithoutFeedback, 
+  StatusBar 
+} from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
+
+// Components
 import ThemeSelector from '../components/ThemeSelector';
 import SunsetCanvas from '../components/SunsetCanvas';
-import EclipseCanvas from '../components/EclipseCanvas'; // Add this line
+import EclipseCanvas from '../components/EclipseCanvas';
+import DigitalGlowCanvas from '../components/DigitalGlowCanvas';
+
+// Hooks
 import { useTimerEngine } from '../hooks/useTimerEngine';
 
-export default function AmbientScreen() {
+/**
+ * AmbientScreen - Main Entry Point
+ */
+const AmbientScreen = () => {
   useKeepAwake();
 
   // 1. STATE INITIALIZATIONS
-  const [currentStep, setCurrentStep] = useState('input');
+  const [currentStep, setCurrentStep] = useState('input'); // 'input' | 'theme' | 'active'
   const [hours, setHours] = useState('00');
   const [minutes, setMinutes] = useState('00');
   const [seconds, setSeconds] = useState('00');
   const [activeTheme, setActiveTheme] = useState(null); 
 
-  // 2. UNCONDITIONAL TOP-LEVEL HOOK INVOCATION
+  // 2. TIMER ENGINE
   const isEngineActive = currentStep === 'active';
   const { progress, isCompleted } = useTimerEngine(
     hours, 
@@ -48,7 +65,21 @@ export default function AmbientScreen() {
 
   const isTimeValid = totalSeconds > 0;
 
-  // 4. SCREEN ROUTING CONDITIONS
+  // 4. RENDER HELPERS
+  const renderActiveCanvas = () => {
+    switch(activeTheme) {
+      case 'lunar':
+        return <EclipseCanvas progress={progress} isCompleted={isCompleted} />;
+      case 'digital':
+        return <DigitalGlowCanvas progress={progress} isCompleted={isCompleted} />;
+      default:
+        return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
+    }
+  };
+
+  // 5. SCREEN ROUTING
+  
+  // THEME SELECTION SCREEN
   if (currentStep === 'theme') {
     return (
       <ThemeSelector 
@@ -61,21 +92,19 @@ export default function AmbientScreen() {
     );
   }
 
+  // ACTIVE TIMER SCREEN
   if (currentStep === 'active') {
     return (
       <View style={[styles.container, styles.activeCanvas]}>
         <StatusBar hidden />
         
-        {/* Render the graphic layer engine chosen dynamically by the user */}
-        {activeTheme === 'lunar' ? (
-          <EclipseCanvas progress={progress} isCompleted={isCompleted} />
-        ) : (
-          <SunsetCanvas progress={progress} isCompleted={isCompleted} />
-        )}
+        {renderActiveCanvas()}
         
-        {/* Absolute distraction-free layout view layer */}
         <View style={styles.minimalExitWrapper}>
-          <TouchableOpacity style={styles.exitButton} onPress={() => setCurrentStep('input')}>
+          <TouchableOpacity 
+            style={styles.exitButton} 
+            onPress={() => setCurrentStep('input')}
+          >
             <Text style={styles.exitButtonText}>END SESSION</Text>
           </TouchableOpacity>
         </View>
@@ -83,11 +112,12 @@ export default function AmbientScreen() {
     );
   }
 
-  // SCREEN 1: INPUT TIMING MANAGER RENDER
+  // INPUT SETUP SCREEN (Default)
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#050505" translucent={false} />
+        
         <Text style={styles.titleText}>DESK AMBIENT</Text>
 
         <View style={styles.inputRow}>
@@ -147,7 +177,7 @@ export default function AmbientScreen() {
       </View>
     </TouchableWithoutFeedback>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -158,7 +188,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   activeCanvas: {
-    backgroundColor: '#050505',
+    backgroundColor: '#000000',
   },
   titleText: {
     color: '#FFFFFF',
@@ -235,7 +265,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 6,
-    zIndex: 10,
   },
   exitButtonText: {
     color: 'rgba(255,255,255,0.3)',
@@ -243,3 +272,5 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 });
+
+export default AmbientScreen;
