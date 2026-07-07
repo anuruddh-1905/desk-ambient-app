@@ -4,9 +4,9 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-nati
 const THEMES = [
   { id: 'sunset', icon: '🌅', name: 'Sunset', subtitle: 'Slow Burn' },
   { id: 'lunar', icon: '🌑', name: 'Lunar', subtitle: 'Moon Phases' },
-  { id: 'digital', icon: '⏱️', name: 'Digital Glow', subtitle: 'Neon Focus' },
+  /*{ id: 'digital', icon: '⏱️', name: 'Digital Glow', subtitle: 'Neon Focus' },
   { id: 'stars', icon: '✨', name: 'Starlight', subtitle: 'Deep Space' },
-  { id: 'rain', icon: '🌧️', name: 'Heavy Rain', subtitle: 'Lofi Window' },
+  { id: 'rain', icon: '🌧️', name: 'Heavy Rain', subtitle: 'Lofi Window' },*/
 ];
 
 export default function ThemeSelector({ onBack, onLaunch }) {
