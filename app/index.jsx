@@ -15,7 +15,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import ThemeSelector from '../components/ThemeSelector';
 import SunsetCanvas from '../components/SunsetCanvas';
 import EclipseCanvas from '../components/EclipseCanvas';
-import DigitalGlowCanvas from '../components/DigitalGlowCanvas';
+//import DigitalGlowCanvas from '../components/DigitalGlowCanvas';
 
 // Hooks
 import { useTimerEngine } from '../hooks/useTimerEngine';
@@ -71,7 +71,7 @@ const AmbientScreen = () => {
       case 'lunar':
         return <EclipseCanvas progress={progress} isCompleted={isCompleted} />;
       case 'digital':
-        return <DigitalGlowCanvas progress={progress} isCompleted={isCompleted} />;
+       // return <DigitalGlowCanvas progress={progress} isCompleted={isCompleted} />;
       default:
         return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
     }
