@@ -44,18 +44,25 @@ const AmbientScreen = () => {
   );
 
   // 3. INPUT UTILITY OPERATIONS
-  const handleTextChange = (text, setter) => {
+  const handleTextChange = (text, setter, max) => {
     const cleanNum = text.replace(/[^0-9]/g, '');
     if (cleanNum.length <= 2) {
-      setter(cleanNum);
+      // Clamp as the user types so they can't exceed the max
+      // (e.g. typing "9" then "9" for hours -> 23, not 99)
+      if (cleanNum !== '' && parseInt(cleanNum, 10) > max) {
+        setter(String(max));
+      } else {
+        setter(cleanNum);
+      }
     }
   };
 
-  const handleBlur = (value, setter) => {
+  const handleBlur = (value, setter, max) => {
     if (!value || value.trim() === '') {
       setter('00');
     } else {
-      setter(value.padStart(2, '0'));
+      const clamped = Math.min(parseInt(value, 10), max);
+      setter(String(clamped).padStart(2, '0'));
     }
   };
 
@@ -126,8 +133,8 @@ const AmbientScreen = () => {
               style={styles.timeInput}
               keyboardType="number-pad"
               value={hours}
-              onChangeText={(txt) => handleTextChange(txt, setHours)}
-              onBlur={() => handleBlur(hours, setHours)}
+              onChangeText={(txt) => handleTextChange(txt, setHours, 23)}
+              onBlur={() => handleBlur(hours, setHours, 23)}
               maxLength={2}
               selectTextOnFocus
             />
@@ -141,8 +148,8 @@ const AmbientScreen = () => {
               style={styles.timeInput}
               keyboardType="number-pad"
               value={minutes}
-              onChangeText={(txt) => handleTextChange(txt, setMinutes)}
-              onBlur={() => handleBlur(minutes, setMinutes)}
+              onChangeText={(txt) => handleTextChange(txt, setMinutes, 59)}
+              onBlur={() => handleBlur(minutes, setMinutes, 59)}
               maxLength={2}
               selectTextOnFocus
             />
@@ -156,8 +163,8 @@ const AmbientScreen = () => {
               style={styles.timeInput}
               keyboardType="number-pad"
               value={seconds}
-              onChangeText={(txt) => handleTextChange(txt, setSeconds)}
-              onBlur={() => handleBlur(seconds, setSeconds)}
+              onChangeText={(txt) => handleTextChange(txt, setSeconds, 59)}
+              onBlur={() => handleBlur(seconds, setSeconds, 59)}
               maxLength={2}
               selectTextOnFocus
             />
