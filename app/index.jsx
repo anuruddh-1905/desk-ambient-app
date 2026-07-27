@@ -15,7 +15,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import ThemeSelector from '../components/ThemeSelector';
 import SunsetCanvas from '../components/SunsetCanvas';
 import EclipseCanvas from '../components/EclipseCanvas';
-//import DigitalGlowCanvas from '../components/DigitalGlowCanvas';
+import AmbientWindowCanvas from '../components/AmbientWindowCanvas'; // 👈 IMPORTED HERE
 
 // Hooks
 import { useTimerEngine } from '../hooks/useTimerEngine';
@@ -47,8 +47,6 @@ const AmbientScreen = () => {
   const handleTextChange = (text, setter, max) => {
     const cleanNum = text.replace(/[^0-9]/g, '');
     if (cleanNum.length <= 2) {
-      // Clamp as the user types so they can't exceed the max
-      // (e.g. typing "9" then "9" for hours -> 23, not 99)
       if (cleanNum !== '' && parseInt(cleanNum, 10) > max) {
         setter(String(max));
       } else {
@@ -75,12 +73,14 @@ const AmbientScreen = () => {
   // 4. RENDER HELPERS
   const renderActiveCanvas = () => {
     switch(activeTheme) {
+      case 'engawa': // 👈 MAPPED YOUR NEW THEME HERE
+        return <AmbientWindowCanvas progress={progress} isCompleted={isCompleted} />;
       case 'lunar':
         return <EclipseCanvas progress={progress} isCompleted={isCompleted} />;
-      case 'digital':
-       // return <DigitalGlowCanvas progress={progress} isCompleted={isCompleted} />;
-      default:
+      case 'sunset':
         return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
+      default:
+        return <AmbientWindowCanvas progress={progress} isCompleted={isCompleted} />;
     }
   };
 

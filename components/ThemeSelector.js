@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal } from 'react-native';
 
 const THEMES = [
+  { id: 'engawa', icon: '🌧️', name: 'Engawa Rain', subtitle: 'Japanese Night Sanctuary' },
   { id: 'sunset', icon: '🌅', name: 'Sunset', subtitle: 'Slow Burn' },
   { id: 'lunar', icon: '🌑', name: 'Lunar', subtitle: 'Moon Phases' },
   /*{ id: 'digital', icon: '⏱️', name: 'Digital Glow', subtitle: 'Neon Focus' },
-  { id: 'stars', icon: '✨', name: 'Starlight', subtitle: 'Deep Space' },
-  { id: 'rain', icon: '🌧️', name: 'Heavy Rain', subtitle: 'Lofi Window' },*/
+  { id: 'stars', icon: '✨', name: 'Starlight', subtitle: 'Deep Space' },*/
 ];
 
 // Split into three parts so VERSION 1.0 and the Email line can carry their
@@ -27,7 +27,7 @@ const NOTE_EMAIL_ADDRESS = 'anuruddhpratap67@gmail.com';
 const NOTE_CLOSING = 'Thank you for giving this little project a place on your desk.';
 
 export default function ThemeSelector({ onBack, onLaunch }) {
-  const [selectedTheme, setSelectedTheme] = useState('sunset');
+  const [selectedTheme, setSelectedTheme] = useState('engawa');
   const [isNoteVisible, setIsNoteVisible] = useState(false); // NEW: modal toggle state
 
   return (
@@ -93,7 +93,7 @@ export default function ThemeSelector({ onBack, onLaunch }) {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>D E V E L O P E R{'   '}N O T E</Text>
+            <Text style={styles.modalTitle}>D E V E L O P E R{'  '}N O T E</Text>
 
             <ScrollView
               style={styles.modalScroll}
@@ -137,9 +137,6 @@ const styles = StyleSheet.create({
     paddingTop: 68,
     paddingBottom: 30,
   },
-  // NEW: equal-width flex containers on both sides guarantee the title
-  // stays visually centered no matter how wide "← BACK" or the info
-  // button end up being — fixes the title drifting off-center.
   headerSideLeft: {
     flex: 1,
     alignItems: 'flex-start',
@@ -162,7 +159,6 @@ const styles = StyleSheet.create({
     letterSpacing: 6,
     textAlign: 'center',
   },
-  // NEW: replaces placeholderSpace (was: { width: 60 })
   infoButton: {
     width: 26,
     height: 26,
@@ -246,9 +242,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 2,
   },
-
-  // NEW: Developer Note modal styles — matches the app's dark, glassy,
-  // spaced-out typographic language.
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
