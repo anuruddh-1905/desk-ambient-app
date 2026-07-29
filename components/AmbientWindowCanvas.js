@@ -1,43 +1,64 @@
 // components/AmbientWindowCanvas.js
-// Phase 1: static layout only. No Animated values yet — sway, rain, mist,
-// and progress-driven color grading arrive in later phases. This pass exists
-// purely to validate composition/proportions against the reference image.
-
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 const SILHOUETTE_BLACK = '#000000';
+const FAR_FOREST_COLOR = '#182447'; // distant forest silhouette — spec-approved, distinct from pure black hero trees
+const WALL_COLOR = '#0A0604'; 
 const FRAME_WOOD = '#2B1B12';
-const FRAME_WOOD_LIGHT = '#4A2F1D';
-const DESK_WOOD = '#4A3018';
-const STONE_PATH_COLOR = '#8A8FA3';
-const STONE_PATH_HIGHLIGHT = '#6B7089';
+const FRAME_WOOD_LIGHT = '#3A2417';
+const PATH_COLOR_NEAR = '#6E7078';   // foreground, closest to the viewer
+const PATH_COLOR_MID = '#555A63';    // middle distance
+const PATH_COLOR_FAR = '#3D4350';    // near the horizon
 const LAMP_SHADE_COLOR = '#F2C879';
 const LAMP_GLOW_COLOR = 'rgba(246, 185, 59, 0.85)';
 
+const DESK_HEIGHT_PERCENT = '26%'; 
+const HORIZON_BOTTOM_PERCENT = '54%'; 
+
 // ---------------------------------------------------------------------------
-// Distant tree-line — one flat jagged silhouette strip, same primitive as
-// the mountain-ridge shape used in Sunset/Eclipse (border-triangles).
+// Background Elements (Sky, Ground, Horizon & Trees)
 // ---------------------------------------------------------------------------
+function GroundPlane() {
+  return (
+    <LinearGradient
+      colors={['#162024', '#0E1417', '#080A0C']} // Deep nocturnal blue-green/black
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: DESK_HEIGHT_PERCENT,
+        height: '28%', // Fills exactly from the desk up to the horizon line
+      }}
+    />
+  );
+}
+
 function TreeLineSilhouette() {
-  const peaks = [14, 22, 12, 26, 16, 24, 13, 20, 15, 23, 12, 18];
+  // Spec rhythm (18,22,20,28,24,19,26,21,23,18) extended to ~22 peaks with
+  // slight variation on the repeat so it never looks like an exact loop.
+  const peaks = [18, 22, 20, 28, 24, 19, 26, 21, 23, 18, 20, 24, 19, 27, 23, 18, 25, 20, 22, 17, 24, 19];
   return (
     <View style={styles.treeLineRow}>
+      {/* Solid strip behind the peaks — this is what makes it blend into
+          the horizon as one continuous silhouette rather than a row of
+          spikes with visible ground-color gaps between them. */}
+      <View style={styles.treeLineBaseStrip} />
       {peaks.map((h, i) => (
         <View
           key={i}
           style={{
             width: 0,
             height: 0,
-            borderLeftWidth: 16,
-            borderRightWidth: 16,
+            borderLeftWidth: 10,
+            borderRightWidth: 10,
             borderBottomWidth: h,
             borderLeftColor: 'transparent',
             borderRightColor: 'transparent',
-            borderBottomColor: SILHOUETTE_BLACK,
-            marginHorizontal: -4,
+            borderBottomColor: FAR_FOREST_COLOR,
+            marginHorizontal: -3, // tight overlap ≈ spec's 4–5% spacing
           }}
         />
       ))}
@@ -45,23 +66,15 @@ function TreeLineSilhouette() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Hero tree — same tiered-triangle construction as Sunset's SpacedSwayingTree
-// and Eclipse's SilhouettePine, unified into one component with a `variant`
-// switch so both the broad pines and the tall thin birches (right side of the
-// reference image) come from a single primitive. Static in Phase 1 — the
-// `sway` prop is accepted now so Phase 4 can wire it in without reshaping
-// this component.
-// ---------------------------------------------------------------------------
-function HeroTree({ height, scale = 1, left, right, variant = 'pine', sway = null }) {
+function HeroTree({ height, scale = 1, left, right, bottom, variant = 'pine', sway = null }) {
   const h = height * scale;
   const tierH = Math.round(h * (variant === 'birch' ? 0.26 : 0.32));
   const baseWidth = Math.round(h * (variant === 'birch' ? 0.30 : 0.58));
-  const Wrapper = sway ? require('react-native').Animated.View : View;
+  const Wrapper = sway ? Animated.View : View;
   const swayStyle = sway ? { transform: [{ rotateZ: sway }], transformOrigin: 'bottom center' } : null;
 
   return (
-    <View style={[styles.absoluteBottomAnchor, { left, right, width: baseWidth, alignItems: 'center' }]}>
+    <View style={[styles.absoluteAnchor, { left, right, bottom: bottom || DESK_HEIGHT_PERCENT, width: baseWidth, alignItems: 'center' }]}>
       <Wrapper style={[{ width: baseWidth, alignItems: 'center' }, swayStyle]}>
         {[0, 1, 2].map((i) => {
           const shrink = 1 - i * (variant === 'birch' ? 0.16 : 0.24);
@@ -95,20 +108,14 @@ function HeroTree({ height, scale = 1, left, right, variant = 'pine', sway = nul
   );
 }
 
-// ---------------------------------------------------------------------------
-// Bush — rounded-blob silhouette, static in Phase 1 (may join a shared sway
-// group later; not decided yet, so left un-animated for now).
-// ---------------------------------------------------------------------------
-function Bush({ size = 26, left, right }) {
+function Bush({ size = 26, left, right, bottom }) {
   return (
     <View
       style={[
-        styles.absoluteBottomAnchor,
+        styles.absoluteAnchor,
         {
-          left,
-          right,
-          width: size,
-          height: size * 0.55,
+          left, right, bottom: bottom || DESK_HEIGHT_PERCENT,
+          width: size, height: size * 0.55,
           borderRadius: size * 0.4,
           backgroundColor: SILHOUETTE_BLACK,
         },
@@ -117,32 +124,22 @@ function Bush({ size = 26, left, right }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Fern — tiny triangle-blade tuft, same primitive as Sunset's soil grass.
-// ---------------------------------------------------------------------------
-function Fern({ left, right, baseHeight = 12 }) {
+function Fern({ left, right, bottom, baseHeight = 12 }) {
   const blades = [
     { h: baseHeight, rot: -18 },
     { h: baseHeight * 1.3, rot: 4 },
     { h: baseHeight * 0.85, rot: 20 },
   ];
   return (
-    <View style={[styles.fernGroup, { left, right }]}>
+    <View style={[styles.fernGroup, { left, right, bottom: bottom || DESK_HEIGHT_PERCENT }]}>
       {blades.map((b, i) => (
         <View
           key={i}
           style={{
-            width: 0,
-            height: 0,
-            marginHorizontal: -1,
-            borderLeftWidth: 2,
-            borderRightWidth: 2,
-            borderBottomWidth: b.h,
-            borderLeftColor: 'transparent',
-            borderRightColor: 'transparent',
-            borderBottomColor: SILHOUETTE_BLACK,
-            transform: [{ rotateZ: `${b.rot}deg` }],
-            transformOrigin: 'bottom center',
+            width: 0, height: 0, marginHorizontal: -1,
+            borderLeftWidth: 2, borderRightWidth: 2, borderBottomWidth: b.h,
+            borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: SILHOUETTE_BLACK,
+            transform: [{ rotateZ: `${b.rot}deg` }], transformOrigin: 'bottom center',
           }}
         />
       ))}
@@ -151,54 +148,42 @@ function Fern({ left, right, baseHeight = 12 }) {
 }
 
 // ---------------------------------------------------------------------------
-// Stone path — the one SVG element in the scene, per the blueprint (a curved
-// path can't be faked with border-triangles). Static fill only in Phase 1;
-// the "wetness" sheen overlay arrives in Phase 5.
+// Path — ONE continuous tapering shape (not individual stones). Wide near
+// the desk/viewer, narrowing toward the horizon for perspective. Single
+// flat fill color for now — color is the only thing we tune from here.
 // ---------------------------------------------------------------------------
 function StonePath() {
   return (
-    <Svg
-      style={StyleSheet.absoluteFill}
-      viewBox="0 0 300 600"
-      preserveAspectRatio="none"
-      pointerEvents="none"
-    >
-      <Path
-        d="M 150 600
-           C 150 520, 110 480, 130 420
-           C 150 360, 195 340, 178 280
-           C 165 235, 172 210, 182 180"
-        stroke={STONE_PATH_COLOR}
-        strokeWidth={22}
-        strokeLinecap="round"
-        fill="none"
-        opacity={0.9}
-      />
-      <Path
-        d="M 150 600
-           C 150 520, 110 480, 130 420
-           C 150 360, 195 340, 178 280
-           C 165 235, 172 210, 182 180"
-        stroke={STONE_PATH_HIGHLIGHT}
-        strokeWidth={4}
-        strokeLinecap="round"
-        fill="none"
-        opacity={0.5}
-      />
-    </Svg>
+    <View style={styles.pathContainer} pointerEvents="none">
+      <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100" preserveAspectRatio="none">
+        <Defs>
+          {/* y1=0 is the top of the viewBox (distance/horizon), y2=1 is the
+              bottom (foreground/viewer) — matches how the path shape itself
+              is drawn (wide at y=100, narrow at y=10). */}
+          <SvgGradient id="pathFillGradient" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={PATH_COLOR_FAR} />
+            <Stop offset="0.5" stopColor={PATH_COLOR_MID} />
+            <Stop offset="1" stopColor={PATH_COLOR_NEAR} />
+          </SvgGradient>
+        </Defs>
+        <Path
+          d="M 25 100 C 40 70, 52 40, 49 10 L 53 10 C 60 40, 66 70, 59 100 Z"
+          fill="url(#pathFillGradient)"
+        />
+      </Svg>
+    </View>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Lantern — static silhouette only in Phase 1 (no glow yet — glow at rest is
-// Phase 2, per the build order). `near`/`far` just scales it.
+// Lanterns (Perspective Depth)
 // ---------------------------------------------------------------------------
-function Lantern({ left, right, top, size = 'near' }) {
-  const scale = size === 'near' ? 1 : 0.5;
+function Lantern({ left, right, bottom, size = 'near' }) {
+  const scale = size === 'near' ? 1 : 0.4;
   const w = 26 * scale;
   const h = 34 * scale;
   return (
-    <View style={[styles.absoluteAnchor, { left, right, top, width: w, alignItems: 'center' }]}>
+    <View style={[styles.absoluteAnchor, { left, right, bottom, width: w, alignItems: 'center' }]}>
       <View style={{ width: w * 0.9, height: h * 0.15, backgroundColor: SILHOUETTE_BLACK }} />
       <View style={{ width: w, height: h * 0.5, backgroundColor: SILHOUETTE_BLACK }} />
       <View style={{ width: w * 0.4, height: h * 0.35, backgroundColor: SILHOUETTE_BLACK }} />
@@ -207,18 +192,19 @@ function Lantern({ left, right, top, size = 'near' }) {
 }
 
 // ---------------------------------------------------------------------------
-// Window frame + desk + lamp — foreground-most layer, drawn last, entirely
-// static forever (per blueprint: "these anchor the you're-sitting-still
-// feeling"). The lamp is warm/lit from the start since a fixed color isn't
-// animation.
+// Foreground Architectural Elements (Window Frame & 3D Desk)
 // ---------------------------------------------------------------------------
 function WindowFrameOverlay() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={styles.muntinVertical} />
-      <View style={[styles.muntinVertical, { left: undefined, right: '32%' }]} />
-      <View style={styles.muntinHorizontal} />
-      <View style={styles.frameBorder} />
+      <View style={styles.wallBorder} />
+      <View style={styles.windowSill} />
+      
+      <View style={styles.muntinVerticalLeft} />
+      <View style={styles.muntinVerticalRight} />
+      
+      <View style={styles.muntinHorizontalLeft} />
+      <View style={styles.muntinHorizontalRight} />
     </View>
   );
 }
@@ -226,8 +212,20 @@ function WindowFrameOverlay() {
 function DeskAndLamp() {
   return (
     <View style={styles.deskArea} pointerEvents="none">
-      <View style={styles.deskSurface} />
+      <LinearGradient
+        colors={['#120A07', '#3A1E0D', '#8C481A']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.deskTopSurface}
+      />
+      <LinearGradient
+        colors={['#0F0805', '#1F1008', '#381C0E']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.deskFrontEdge}
+      />
       <View style={styles.lampWrapper}>
+        <View style={styles.tableReflectionGlow} />
         <View style={styles.lampGlowHalo} />
         <View style={styles.lampShade} />
         <View style={styles.lampPole} />
@@ -248,148 +246,157 @@ export default function AmbientWindowCanvas({ progress, isCompleted }) {
 
   return (
     <View style={styles.canvasFrame} onLayout={onCanvasLayout}>
-
-      {/* ---------------- SKY (static mid-point palette for Phase 1) ---------------- */}
-      <LinearGradient
-        colors={['#2E2456', '#4A2E5C', '#B85C4A', '#E8935A']}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* ---------------- DISTANT TREE-LINE ---------------- */}
+      <LinearGradient colors={['#2E2456', '#4A2E5C', '#B85C4A', '#E8935A']} style={StyleSheet.absoluteFill} />
+      
+      <GroundPlane />
       <TreeLineSilhouette />
-
-      {/* ---------------- HERO TREES ---------------- */}
-      <HeroTree height={130} scale={1} left="4%" variant="pine" />
-      <HeroTree height={70} scale={1} left="18%" variant="pine" />
-      <HeroTree height={110} scale={1} right="30%" variant="pine" />
-      <HeroTree height={190} scale={1} right="16%" variant="birch" />
-      <HeroTree height={170} scale={1} right="6%" variant="birch" />
-
-      {/* ---------------- BUSHES ---------------- */}
-      <Bush size={22} left="10%" />
-      <Bush size={18} left="24%" />
-      <Bush size={26} left="40%" />
-      <Bush size={20} right="38%" />
-      <Bush size={24} right="22%" />
-      <Bush size={18} right="10%" />
-
-      {/* ---------------- FERNS ---------------- */}
-      <Fern left="14%" baseHeight={12} />
-      <Fern right="34%" baseHeight={10} />
-      <Fern right="14%" baseHeight={13} />
-
-      {/* ---------------- STONE PATH ---------------- */}
       <StonePath />
-
-      {/* ---------------- LANTERNS ---------------- */}
-      <Lantern left="8%" top="72%" size="near" />
-      <Lantern left="46%" top="46%" size="far" />
-
-      {/* ---------------- WINDOW FRAME + DESK + LAMP (foreground) ---------------- */}
+      
+      <HeroTree height={130} left="4%" variant="pine" />
+      <HeroTree height={70} left="18%" bottom="35%" variant="pine" />
+      <HeroTree height={110} right="30%" bottom="40%" variant="pine" />
+      <HeroTree height={190} right="16%" variant="birch" />
+      <HeroTree height={170} right="6%" variant="birch" />
+      
+      <Lantern left="18%" bottom="28%" size="near" />
+      <Lantern left="50%" bottom="52%" size="far" />
+      
+      <Bush size={22} left="10%" />
+      <Bush size={18} left="24%" bottom="30%" />
+      <Bush size={26} left="40%" bottom="38%" />
+      <Bush size={20} right="38%" bottom="42%" />
+      <Bush size={24} right="22%" bottom="32%" />
+      <Bush size={18} right="10%" />
+      
+      <Fern left="14%" baseHeight={12} />
+      <Fern right="34%" bottom="30%" baseHeight={10} />
+      <Fern right="14%" baseHeight={13} />
+      
       <WindowFrameOverlay />
       <DeskAndLamp />
-
     </View>
   );
 }
 
+// ---------------------------------------------------------------------------
+// STYLES
+// ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   canvasFrame: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
     backgroundColor: '#1A1530',
   },
-  absoluteBottomAnchor: {
-    position: 'absolute',
-    bottom: '18%',
-    justifyContent: 'flex-end',
-  },
   absoluteAnchor: {
     position: 'absolute',
+    justifyContent: 'flex-end',
   },
   treeLineRow: {
     position: 'absolute',
-    bottom: '30%',
+    bottom: HORIZON_BOTTOM_PERCENT,
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'nowrap',
   },
+  treeLineBaseStrip: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: -4, // bleeds a few px below the horizon line into the ground plane — no visible seam
+    height: 8,
+    backgroundColor: FAR_FOREST_COLOR,
+  },
   fernGroup: {
     position: 'absolute',
-    bottom: '18%',
     flexDirection: 'row',
     alignItems: 'flex-end',
   },
-  // Window frame
-  muntinVertical: {
+  pathContainer: {
     position: 'absolute',
-    left: '32%',
-    top: 0,
-    bottom: '20%',
-    width: 10,
-    backgroundColor: FRAME_WOOD,
+    bottom: DESK_HEIGHT_PERCENT,
+    left: '10%',
+    right: '10%',
+    height: '28%',
   },
-  muntinHorizontal: {
+
+  // -- WINDOW ARCHITECTURE --
+  wallBorder: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: '55%',
-    height: 10,
-    backgroundColor: FRAME_WOOD,
+    top: 0, left: 0, right: 0, bottom: DESK_HEIGHT_PERCENT,
+    borderWidth: 16,
+    borderBottomWidth: 0, 
+    borderColor: WALL_COLOR, 
   },
-  frameBorder: {
+  windowSill: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: '20%',
-    borderWidth: 14,
-    borderColor: FRAME_WOOD_LIGHT,
+    left: 0, right: 0, bottom: DESK_HEIGHT_PERCENT,
+    height: 14,
+    backgroundColor: FRAME_WOOD_LIGHT,
+    borderTopWidth: 2,
+    borderTopColor: '#5C3A24',
   },
-  // Desk + lamp
+  muntinVerticalLeft: {
+    position: 'absolute', left: '15%', top: 16, bottom: DESK_HEIGHT_PERCENT, width: 14, backgroundColor: FRAME_WOOD,
+  },
+  muntinVerticalRight: {
+    position: 'absolute', right: '15%', top: 16, bottom: DESK_HEIGHT_PERCENT, width: 14, backgroundColor: FRAME_WOOD,
+  },
+  muntinHorizontalLeft: {
+    position: 'absolute', top: '25%', left: 16, width: '15%', height: 14, backgroundColor: FRAME_WOOD,
+  },
+  muntinHorizontalRight: {
+    position: 'absolute', top: '25%', right: 16, width: '15%', height: 14, backgroundColor: FRAME_WOOD,
+  },
+
+  // -- DESK (3D Realism via Light Gradients) & LAMP --
   deskArea: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '20%',
+    left: 0, right: 0, bottom: 0,
+    height: DESK_HEIGHT_PERCENT,
   },
-  deskSurface: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: DESK_WOOD,
+  deskTopSurface: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: '65%', 
+    borderTopWidth: 2,
+    borderTopColor: '#1A0E08',
+  },
+  deskFrontEdge: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    height: '35%', 
+    borderTopWidth: 1,
+    borderTopColor: '#4A2510', 
   },
   lampWrapper: {
     position: 'absolute',
-    right: '10%',
-    bottom: '35%',
+    right: '8%',
+    bottom: '15%', 
     alignItems: 'center',
+  },
+  tableReflectionGlow: {
+    position: 'absolute',
+    bottom: -8,
+    width: 130, 
+    height: 30,
+    borderRadius: 65,
+    backgroundColor: 'rgba(246, 185, 59, 0.45)', 
+    transform: [{ scaleY: 0.4 }], 
   },
   lampGlowHalo: {
     position: 'absolute',
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: LAMP_GLOW_COLOR,
-    opacity: 0.35,
-    top: -20,
+    width: 150, height: 150, borderRadius: 75,
+    backgroundColor: LAMP_GLOW_COLOR, opacity: 0.35, top: -35,
   },
   lampShade: {
-    width: 44,
-    height: 36,
-    backgroundColor: LAMP_SHADE_COLOR,
-    borderRadius: 6,
+    width: 80, height: 60, backgroundColor: LAMP_SHADE_COLOR, borderRadius: 8,
   },
   lampPole: {
-    width: 4,
-    height: 30,
-    backgroundColor: '#1A1310',
+    width: 8, height: 50, backgroundColor: '#1A1310',
   },
   lampBase: {
-    width: 40,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#1A1310',
+    width: 70, height: 10, borderRadius: 5, backgroundColor: '#1A1310',
   },
 });
