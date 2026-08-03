@@ -15,7 +15,8 @@ import { useKeepAwake } from 'expo-keep-awake';
 import ThemeSelector from '../components/ThemeSelector';
 import SunsetCanvas from '../components/SunsetCanvas';
 import EclipseCanvas from '../components/EclipseCanvas';
-import AmbientWindowCanvas from '../components/AmbientWindowCanvas'; // 👈 IMPORTED HERE
+import AmbientWindowCanvas from '../components/AmbientWindowCanvas'; 
+import ZenPandaCanvas from '../components/ZenPandaCanvas'; // 👈 NEW PANDA CANVAS IMPORTED
 
 // Hooks
 import { useTimerEngine } from '../hooks/useTimerEngine';
@@ -73,14 +74,17 @@ const AmbientScreen = () => {
   // 4. RENDER HELPERS
   const renderActiveCanvas = () => {
     switch(activeTheme) {
-      case 'engawa': // 👈 MAPPED YOUR NEW THEME HERE
+      case 'panda': // 👈 MAPPED THE NEW PANDA THEME HERE
+        return <ZenPandaCanvas progress={progress} isCompleted={isCompleted} />;
+      case 'engawa': 
         return <AmbientWindowCanvas progress={progress} isCompleted={isCompleted} />;
       case 'lunar':
         return <EclipseCanvas progress={progress} isCompleted={isCompleted} />;
       case 'sunset':
         return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
       default:
-        return <AmbientWindowCanvas progress={progress} isCompleted={isCompleted} />;
+        // Defaulting to panda as it is the new primary focus
+        return <ZenPandaCanvas progress={progress} isCompleted={isCompleted} />;
     }
   };
 

@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal } from 'react-native';
 
 const THEMES = [
+  { id: 'panda', icon: '🐼', name: 'Zen Panda', subtitle: 'Phygital Desk Companion' },
   { id: 'engawa', icon: '🌧️', name: 'Engawa Rain', subtitle: 'Japanese Night Sanctuary' },
   { id: 'sunset', icon: '🌅', name: 'Sunset', subtitle: 'Slow Burn' },
   { id: 'lunar', icon: '🌑', name: 'Lunar', subtitle: 'Moon Phases' },
-  /*{ id: 'digital', icon: '⏱️', name: 'Digital Glow', subtitle: 'Neon Focus' },
-  { id: 'stars', icon: '✨', name: 'Starlight', subtitle: 'Deep Space' },*/
 ];
 
 // Split into three parts so VERSION 1.0 and the Email line can carry their
@@ -27,8 +26,8 @@ const NOTE_EMAIL_ADDRESS = 'anuruddhpratap67@gmail.com';
 const NOTE_CLOSING = 'Thank you for giving this little project a place on your desk.';
 
 export default function ThemeSelector({ onBack, onLaunch }) {
-  const [selectedTheme, setSelectedTheme] = useState('engawa');
-  const [isNoteVisible, setIsNoteVisible] = useState(false); // NEW: modal toggle state
+  const [selectedTheme, setSelectedTheme] = useState('panda'); // Set Panda as default
+  const [isNoteVisible, setIsNoteVisible] = useState(false); 
 
   return (
     <View style={styles.container}>
@@ -83,7 +82,7 @@ export default function ThemeSelector({ onBack, onLaunch }) {
         </TouchableOpacity>
       </View>
 
-      {/* NEW: Developer Note modal overlay */}
+      {/* Developer Note modal overlay */}
       <Modal
         visible={isNoteVisible}
         transparent

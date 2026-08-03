@@ -6,6 +6,10 @@ import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-nati
 
 const SILHOUETTE_BLACK = '#000000';
 const FAR_FOREST_COLOR = '#182447'; // distant forest silhouette — spec-approved, distinct from pure black hero trees
+const MIDGROUND_COLOR = '#131C37'; // medium-distance trees — sits between far forest and pure-black hero trees
+const HERO_TREE_COLOR = '#040404'; // foreground hero trees — spec-approved, near-black
+const BIRCH_TRUNK_COLOR = '#565F7A'; // muted cool slate — lighter than the canopy so birch reads as birch, but dim enough to stay silhouette-like
+const BIRCH_NOTCH_COLOR = '#1B2036'; // subtle darker bark marks on the birch trunk
 const WALL_COLOR = '#0A0604'; 
 const FRAME_WOOD = '#2B1B12';
 const FRAME_WOOD_LIGHT = '#3A2417';
@@ -66,12 +70,83 @@ function TreeLineSilhouette() {
   );
 }
 
-function HeroTree({ height, scale = 1, left, right, bottom, variant = 'pine', sway = null }) {
+// Medium-distance layer — purely an atmospheric depth cue, never a focal
+// point. Deliberately flat/undetailed (no tiers, no trunk) since at this
+// distance simplicity itself reads as "farther away." Fully static.
+function MidgroundTree({ height, left, right, bottom }) {
+  const w = Math.round(height * 0.5);
+  return (
+    <View style={[styles.absoluteAnchor, { left, right, bottom, width: w, alignItems: 'center' }]}>
+      <View
+        style={{
+          width: 0,
+          height: 0,
+          borderLeftWidth: w / 2,
+          borderRightWidth: w / 2,
+          borderBottomWidth: height,
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          borderBottomColor: MIDGROUND_COLOR,
+        }}
+      />
+    </View>
+  );
+}
+
+// Rounded canopy built from overlapping circles — the classic cheap way to
+// fake an organic, lobed silhouette instead of a geometric triangle stack.
+function BroadleafCanopy({ width, aspect = 0.85 }) {
+  const h = width * aspect;
+  const lobes = [
+    { size: 1.0, top: 0, left: 0.5 },
+    { size: 0.72, top: 0.22, left: 0.17 },
+    { size: 0.72, top: 0.22, left: 0.83 },
+    { size: 0.6, top: 0.48, left: 0.32 },
+    { size: 0.6, top: 0.48, left: 0.68 },
+  ];
+  return (
+    <View style={{ width, height: h }}>
+      {lobes.map((l, i) => {
+        const d = width * l.size * 0.62;
+        return (
+          <View
+            key={i}
+            style={{
+              position: 'absolute',
+              width: d,
+              height: d,
+              borderRadius: d / 2,
+              backgroundColor: HERO_TREE_COLOR,
+              left: width * l.left - d / 2,
+              top: h * l.top,
+            }}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+function HeroTree({ height, scale = 1, left, right, bottom, variant = 'pine', canopyWidth = null, sway = null }) {
   const h = height * scale;
-  const tierH = Math.round(h * (variant === 'birch' ? 0.26 : 0.32));
-  const baseWidth = Math.round(h * (variant === 'birch' ? 0.30 : 0.58));
   const Wrapper = sway ? Animated.View : View;
   const swayStyle = sway ? { transform: [{ rotateZ: sway }], transformOrigin: 'bottom center' } : null;
+
+  if (variant === 'broadleaf') {
+    const cWidth = (canopyWidth || h * 0.46) * scale;
+    const trunkHeight = h * 0.22;
+    return (
+      <View style={[styles.absoluteAnchor, { left, right, bottom: bottom || DESK_HEIGHT_PERCENT, width: cWidth, alignItems: 'center' }]}>
+        <Wrapper style={swayStyle}>
+          <BroadleafCanopy width={cWidth} />
+        </Wrapper>
+        <View style={{ width: Math.max(4, cWidth * 0.08), height: trunkHeight, backgroundColor: HERO_TREE_COLOR, marginTop: -2 }} />
+      </View>
+    );
+  }
+
+  const tierH = Math.round(h * (variant === 'birch' ? 0.26 : 0.32));
+  const baseWidth = Math.round(h * (variant === 'birch' ? 0.30 : 0.58));
 
   return (
     <View style={[styles.absoluteAnchor, { left, right, bottom: bottom || DESK_HEIGHT_PERCENT, width: baseWidth, alignItems: 'center' }]}>
@@ -90,7 +165,7 @@ function HeroTree({ height, scale = 1, left, right, bottom, variant = 'pine', sw
                 borderBottomWidth: tierH,
                 borderLeftColor: 'transparent',
                 borderRightColor: 'transparent',
-                borderBottomColor: SILHOUETTE_BLACK,
+                borderBottomColor: HERO_TREE_COLOR,
               }}
             />
           );
@@ -100,10 +175,70 @@ function HeroTree({ height, scale = 1, left, right, bottom, variant = 'pine', sw
         style={{
           width: Math.max(3, baseWidth * (variant === 'birch' ? 0.08 : 0.14)),
           height: Math.round(h * (variant === 'birch' ? 0.36 : 0.18)),
-          backgroundColor: SILHOUETTE_BLACK,
+          backgroundColor: HERO_TREE_COLOR,
           marginTop: -1,
         }}
       />
+    </View>
+  );
+}
+
+// Single thin birch trunk: small sparse canopy only near the top (not a
+// full tiered cone), pale-slate trunk with a few subtle darker bark notches
+// — since color does the "this is birch, not pine" work now.
+function BirchTrunk({ height, trunkWidth = 4 }) {
+  const canopyH = height * 0.2;
+  const trunkH = height * 0.8;
+  const notchPositions = [0.28, 0.52, 0.74];
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <View
+        style={{
+          width: 0,
+          height: 0,
+          borderLeftWidth: trunkWidth * 2.4,
+          borderRightWidth: trunkWidth * 2.4,
+          borderBottomWidth: canopyH,
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          borderBottomColor: HERO_TREE_COLOR,
+        }}
+      />
+      <View style={{ width: trunkWidth, height: trunkH, backgroundColor: BIRCH_TRUNK_COLOR, marginTop: -1 }}>
+        {notchPositions.map((p, i) => (
+          <View
+            key={i}
+            style={{
+              position: 'absolute',
+              top: `${p * 100}%`,
+              left: 0,
+              right: 0,
+              height: 2,
+              backgroundColor: BIRCH_NOTCH_COLOR,
+              opacity: 0.65,
+            }}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// Three birch trunks grouped as ONE visual unit (and, once animation is
+// wired, one shared sway) — cheaper than three independent trees, and reads
+// as "a stand of birches" the way a single tree wouldn't.
+function BirchCluster({ left, right, bottom, heights = [150, 140, 132], sway = null }) {
+  const Wrapper = sway ? Animated.View : View;
+  const swayStyle = sway ? { transform: [{ rotateZ: sway }], transformOrigin: 'bottom center' } : null;
+  return (
+    <View style={[styles.absoluteAnchor, { left, right, bottom: bottom || DESK_HEIGHT_PERCENT, flexDirection: 'row', alignItems: 'flex-end' }]}>
+      <Wrapper style={[{ flexDirection: 'row', alignItems: 'flex-end' }, swayStyle]}>
+        {heights.map((h, i) => (
+          <View key={i} style={{ marginHorizontal: 2 }}>
+            <BirchTrunk height={h} trunkWidth={i === 1 ? 5 : 4} />
+          </View>
+        ))}
+      </Wrapper>
     </View>
   );
 }
@@ -250,13 +385,16 @@ export default function AmbientWindowCanvas({ progress, isCompleted }) {
       
       <GroundPlane />
       <TreeLineSilhouette />
+
       <StonePath />
       
-      <HeroTree height={130} left="4%" variant="pine" />
-      <HeroTree height={70} left="18%" bottom="35%" variant="pine" />
-      <HeroTree height={110} right="30%" bottom="40%" variant="pine" />
-      <HeroTree height={190} right="16%" variant="birch" />
-      <HeroTree height={170} right="6%" variant="birch" />
+      {/* Hero trees — Tree A pushed to 11% to respect the 10% empty-margin
+          rule (spec's literal 9% would sit inside that zone). Static for
+          now; sway wiring comes in a later animation pass. */}
+      <HeroTree variant="broadleaf" left="11%" height={135} canopyWidth={62} />
+      <HeroTree variant="pine" left="24%" height={82} />
+      <HeroTree variant="broadleaf" left="73%" height={102} />
+      <BirchCluster left="91%" heights={[150, 140, 132]} />
       
       <Lantern left="18%" bottom="28%" size="near" />
       <Lantern left="50%" bottom="52%" size="far" />
