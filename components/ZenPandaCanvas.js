@@ -1,7 +1,7 @@
 // components/ZenPandaCanvas.js
-// Step 4c (Gentle, Short Arms): 
-// Moved the arms up toward the upper torso, shortened them, and angled 
-// them for a soft, delicate hold on the bamboo.
+// Step 6: Updated dark patches. Deepened the base color to midnight black, 
+// added glowing neon pink rim-lighting to the outer edges of the ears and arms, 
+// and turned the eyes into bright white highlights.
 
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -9,7 +9,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const PLACEHOLDER_VOID = '#0B0D12';
 const PLACEHOLDER_BODY = '#C1C6CF'; 
-const PLACEHOLDER_PATCH = '#242830'; 
+
+// 1. Deepened the dark base color for limbs, ears, and patches
+const COLOR_DARK_PATCH = '#0A0B10'; 
+// 2. Defined the neon magenta rim light
+const COLOR_NEON_RIM = '#FF29FF'; 
 
 const COLOR_VOID_TOP = '#080A0F';     
 const COLOR_VOID_BOTTOM = '#1C2433';  
@@ -20,13 +24,11 @@ const SHADOW_COLOR = '#000000';
 const DESK_HEIGHT_PERCENT = '12%'; 
 
 function PhygitalCompanion({ canvasWidth }) {
-  // 1. GLOBAL SCALE
   const W = canvasWidth * 0.5; 
   
   const wrapW = W * 1.2; 
   const wrapH = W * 1.8; 
 
-  // 2. COMPONENT SIZES
   const headW = W;
   const headH = W * 0.75; 
   const bodyW = W * 0.95; 
@@ -34,7 +36,6 @@ function PhygitalCompanion({ canvasWidth }) {
   
   const bambooW = W * 0.24;
 
-  // 3. VERTICAL STACKING MATH
   const deskY = 0;
   const bodyBottom = deskY - (bodyH * 0.05); 
   const headBottom = bodyBottom + (bodyH * 0.60); 
@@ -57,32 +58,6 @@ function PhygitalCompanion({ canvasWidth }) {
         zIndex: 0,
       }} />
 
-      {/* --- LEGS --- */}
-      <View style={[
-        styles.patchShape, 
-        { 
-          width: W * 0.45, 
-          height: W * 0.32, 
-          borderRadius: W * 0.16, 
-          bottom: bodyBottom + (W * 0.04), 
-          left: (wrapW - bodyW) / 2 - (W * 0.12),
-          transform: [{rotateZ: '15deg'}], 
-          zIndex: 1 
-        }
-      ]} />
-      <View style={[
-        styles.patchShape, 
-        { 
-          width: W * 0.45, 
-          height: W * 0.32, 
-          borderRadius: W * 0.16, 
-          bottom: bodyBottom + (W * 0.04), 
-          right: (wrapW - bodyW) / 2 - (W * 0.12), 
-          transform: [{rotateZ: '-15deg'}], 
-          zIndex: 1 
-        }
-      ]} />
-
       {/* --- BODY --- */}
       <View style={[
         styles.bodyShape, 
@@ -92,9 +67,17 @@ function PhygitalCompanion({ canvasWidth }) {
           borderRadius: bodyW / 2, 
           bottom: bodyBottom, 
           left: (wrapW - bodyW) / 2,
+          overflow: 'hidden', 
           zIndex: 2 
         }
-      ]} />
+      ]}>
+        <LinearGradient
+          colors={['#C084FC', '#38BDF8', '#06B6D4']} 
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </View>
 
       {/* --- JADISH BAMBOO GLASS --- */}
       <View style={[
@@ -112,29 +95,35 @@ function PhygitalCompanion({ canvasWidth }) {
         <View style={styles.bambooJoint} />
       </View>
 
-      {/* --- GENTLE ARMS (Shorter, connected higher up, soft grip) --- */}
+      {/* --- GENTLE ARMS (With Neon Rim Light) --- */}
       <View style={[
         styles.patchShape, 
         { 
-          width: W * 0.42, 
-          height: W * 0.22, 
-          borderRadius: W * 0.11, 
-          bottom: bodyBottom + (bodyH * 0.52), // Moved much higher up near the shoulders/head
-          left: (wrapW - bodyW) / 2 - (W * 0.05), // Anchored closer in
-          transform: [{rotateZ: '25deg'}], // Gently sloping down to cup the bamboo
-          zIndex: 4 
+          width: W * 0.52, 
+          height: W * 0.24, 
+          borderRadius: W * 0.12, 
+          bottom: bodyBottom + (bodyH * 0.34),
+          left: (wrapW - bodyW) / 2 - (W * 0.09),
+          transform: [{ rotateZ: '28deg' }],
+          borderTopWidth: 2.5,
+          borderLeftWidth: 2.5,
+          borderColor: COLOR_NEON_RIM,
+          zIndex: 4,
         }
       ]} />
       <View style={[
         styles.patchShape, 
         { 
-          width: W * 0.42, 
-          height: W * 0.22, 
-          borderRadius: W * 0.11, 
-          bottom: bodyBottom + (bodyH * 0.52), 
-          right: (wrapW - bodyW) / 2 - (W * 0.05), 
-          transform: [{rotateZ: '-25deg'}], 
-          zIndex: 4 
+          width: W * 0.52, 
+          height: W * 0.24, 
+          borderRadius: W * 0.12, 
+          bottom: bodyBottom + (bodyH * 0.34), 
+          right: (wrapW - bodyW) / 2 - (W * 0.09), 
+          transform: [{ rotateZ: '-28deg' }], 
+          borderTopWidth: 2.5,
+          borderRightWidth: 2.5,
+          borderColor: COLOR_NEON_RIM,
+          zIndex: 4,
         }
       ]} />
 
@@ -148,23 +137,43 @@ function PhygitalCompanion({ canvasWidth }) {
         zIndex: 5 
       }}>
         
-        {/* Ears */}
+        {/* Ears (With Neon Rim Light) */}
         <View style={[
           styles.patchShape, 
-          { width: W*0.3, height: W*0.3, borderRadius: W*0.15, top: -W*0.06, left: -W*0.02, zIndex: -1 }
+          { 
+            width: W*0.3, height: W*0.3, borderRadius: W*0.15, top: -W*0.06, left: -W*0.02, 
+            borderTopWidth: 2, borderLeftWidth: 2, borderColor: COLOR_NEON_RIM, zIndex: -1 
+          }
         ]} />
         <View style={[
           styles.patchShape, 
-          { width: W*0.3, height: W*0.3, borderRadius: W*0.15, top: -W*0.06, right: -W*0.02, zIndex: -1 }
+          { 
+            width: W*0.3, height: W*0.3, borderRadius: W*0.15, top: -W*0.06, right: -W*0.02, 
+            borderTopWidth: 2, borderRightWidth: 2, borderColor: COLOR_NEON_RIM, zIndex: -1 
+          }
         ]} />
 
         {/* Head Base */}
         <View style={[
           styles.bodyShape, 
-          { width: headW, height: headH, borderRadius: headW * 0.5, top: 0, left: 0 }
-        ]} />
+          { 
+            width: headW, 
+            height: headH, 
+            borderRadius: headW * 0.5, 
+            top: 0, 
+            left: 0,
+            overflow: 'hidden' 
+          }
+        ]}>
+          <LinearGradient
+            colors={['#A855F7', '#818CF8', '#38BDF8']} 
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
 
-        {/* Eye Patches */}
+        {/* Eye Patches (Solid Dark Base) */}
         <View style={[
           styles.patchShape, 
           { width: W*0.32, height: W*0.22, borderRadius: W*0.12, top: headH*0.4, left: W*0.12, transform: [{rotateZ: '-25deg'}] }
@@ -174,11 +183,11 @@ function PhygitalCompanion({ canvasWidth }) {
           { width: W*0.32, height: W*0.22, borderRadius: W*0.12, top: headH*0.4, right: W*0.12, transform: [{rotateZ: '25deg'}] }
         ]} />
 
-        {/* Eyes (Open) */}
-        <View style={{ position: 'absolute', width: W*0.07, height: W*0.07, backgroundColor: PLACEHOLDER_VOID, top: headH*0.48, left: W*0.22, borderRadius: W*0.035 }} />
-        <View style={{ position: 'absolute', width: W*0.07, height: W*0.07, backgroundColor: PLACEHOLDER_VOID, top: headH*0.48, right: W*0.22, borderRadius: W*0.035 }} />
+        {/* Eyes (Updated to pure white highlights) */}
+        <View style={{ position: 'absolute', width: W*0.07, height: W*0.07, backgroundColor: '#FFFFFF', top: headH*0.48, left: W*0.22, borderRadius: W*0.035 }} />
+        <View style={{ position: 'absolute', width: W*0.07, height: W*0.07, backgroundColor: '#FFFFFF', top: headH*0.48, right: W*0.22, borderRadius: W*0.035 }} />
 
-        {/* Nose */}
+        {/* Nose (Solid Dark Base) */}
         <View style={[
           styles.patchShape, 
           { width: W*0.12, height: W*0.07, borderRadius: W*0.035, bottom: headH*0.12, left: (headW - W*0.12) / 2 }
@@ -239,7 +248,7 @@ const styles = StyleSheet.create({
   },
   patchShape: {
     position: 'absolute',
-    backgroundColor: PLACEHOLDER_PATCH,
+    backgroundColor: COLOR_DARK_PATCH, // Applied deep midnight black
   },
   bambooShape: {
     position: 'absolute',
