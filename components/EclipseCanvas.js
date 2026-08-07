@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated, Easing, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -80,7 +80,6 @@ function ForegroundCluster({ eclipseProgress }) {
 
   return (
     <View style={styles.rightClusterWrapper}>
-      {/* FINAL ADJUSTMENT: Medium tree shifted left to create clean silhouette separation */}
       <SilhouettePine scale={1.0} right={130} bottom={0} /> 
       <SilhouettePine scale={1.5} right={85} bottom={0} />  
       <SilhouettePine scale={2.0} right={35} bottom={0} />  
@@ -109,15 +108,23 @@ export default function EclipseCanvas({ progress }) {
     }).start();
   }, [progress, progressAnim]);
 
+  // Smooth shadow traverse across the moon disc
   const shadowTranslateX = progressAnim.interpolate({
     inputRange: [0, 100],
-    outputRange: [160, -45], 
+    outputRange: [160, -10], 
+    extrapolate: 'clamp',
+  });
+
+  // Soft atmospheric shadow opacity for a realistic edge bleed
+  const shadowOpacity = progressAnim.interpolate({
+    inputRange: [0, 10, 90, 100],
+    outputRange: [0, 0.92, 0.95, 0.98],
     extrapolate: 'clamp',
   });
 
   const moonBaseColor = progressAnim.interpolate({
     inputRange: [0, 40, 75, 100],
-    outputRange: ['#FFF9EE', '#D0CCD5', '#8B0000', '#4A0000'],
+    outputRange: ['#FFF9EE', '#D0CCD5', '#8B0000', '#2E0303'],
   });
 
   const horizonLightOpacity = progressAnim.interpolate({
@@ -130,7 +137,6 @@ export default function EclipseCanvas({ progress }) {
     <View style={styles.canvasFrame}>
       
       {/* ---------------- OLED-SAFE HORIZON LIGHTING ---------------- */}
-      {/* FINAL ADJUSTMENT: Bottom hex lifted from #0A0D2E to #0F133D to combat OLED crush */}
       <LinearGradient colors={['#000004', '#02020E', '#080A26', '#0F133D']} style={StyleSheet.absoluteFill} />
       
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: horizonLightOpacity }]}>
@@ -150,10 +156,21 @@ export default function EclipseCanvas({ progress }) {
         <Text style={[styles.starSparkle, { left: '80%', top: '22%', fontSize: 8 }]}>✦</Text>
       </View>
 
-      {/* ---------------- THE CLEAN ECLIPSE ---------------- */}
+      {/* ---------------- REALISTIC SOFT-ECLIPSE MOON ---------------- */}
       <View style={styles.eclipseCenterFrame}>
-        <Animated.View style={[styles.moonGlobe, { backgroundColor: moonBaseColor }]} />
-        <Animated.View style={[styles.earthShadowCircle, { transform: [{ translateX: shadowTranslateX }] }]} />
+        {/* Base Moon Globe */}
+        <Animated.View style={[styles.moonGlobe, { backgroundColor: moonBaseColor }]}>
+          {/* Feathered Atmospheric Shadow Overlay */}
+          <Animated.View 
+            style={[
+              styles.earthShadowCircle, 
+              { 
+                opacity: shadowOpacity,
+                transform: [{ translateX: shadowTranslateX }] 
+              }
+            ]} 
+          />
+        </Animated.View>
       </View>
 
       {/* ---------------- RURAL HORIZON ---------------- */}
@@ -205,18 +222,27 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
+    overflow: 'hidden', // Clips shadow strictly inside moon bounds
     shadowColor: '#FFF9EE',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1, 
-    shadowRadius: 30, 
+    shadowOpacity: 0.15, 
+    shadowRadius: 25, 
     elevation: 4,
   },
   earthShadowCircle: {
     position: 'absolute',
-    width: 166, 
-    height: 166,
-    borderRadius: 83,
-    backgroundColor: '#000004', 
+    top: -10,
+    left: -10,
+    width: 180, 
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#02020E', // Deep space atmospheric shadow tone
+    // Soft blurred edge effect for umbra/penumbra realism
+    shadowColor: '#000000',
+    shadowOffset: { width: -8, height: 0 },
+    shadowOpacity: 0.95,
+    shadowRadius: 14,
+    elevation: 6,
   },
   horizonMatting: {
     position: 'absolute',

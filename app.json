@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "desk-ambient-app",
+    "name": "desk-ambient",
     "slug": "desk-ambient-app",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "deskambientapp",
     "userInterfaceStyle": "automatic",
@@ -36,7 +36,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#000000",
+            "showName": false
           }
         }
       ]

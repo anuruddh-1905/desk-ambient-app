@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal } from 'react-native';
 
 const THEMES = [
-  { id: 'panda', icon: '🐼', name: 'Zen Panda', subtitle: 'Phygital Desk Companion' },
-  { id: 'engawa', icon: '🌧️', name: 'Engawa Rain', subtitle: 'Japanese Night Sanctuary' },
-  { id: 'sunset', icon: '🌅', name: 'Sunset', subtitle: 'Slow Burn' },
-  { id: 'lunar', icon: '🌑', name: 'Lunar', subtitle: 'Moon Phases' },
+  { id: 'sunset', icon: '🌅', name: 'Sun Horizon', subtitle: 'Daytime Sunlight Arc' },
+  { id: 'lunar', icon: '🌑', name: 'Lunar Phase', subtitle: 'Night Moon Cycle' },
 ];
 
 // Split into three parts so VERSION 1.0 and the Email line can carry their
@@ -26,7 +24,7 @@ const NOTE_EMAIL_ADDRESS = 'anuruddhpratap67@gmail.com';
 const NOTE_CLOSING = 'Thank you for giving this little project a place on your desk.';
 
 export default function ThemeSelector({ onBack, onLaunch }) {
-  const [selectedTheme, setSelectedTheme] = useState('panda'); // Set Panda as default
+  const [selectedTheme, setSelectedTheme] = useState('sunset'); // Default to Sun theme
   const [isNoteVisible, setIsNoteVisible] = useState(false); 
 
   return (
@@ -159,18 +157,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   infoButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#F2C879', 
+    backgroundColor: 'rgba(242, 200, 121, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#F2C879',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 4,
   },
   infoButtonText: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 12,
-    fontWeight: '600',
+    color: '#F2C879',
+    fontSize: 14,
+    fontWeight: '700',
     fontStyle: 'italic',
   },
   listContainer: {

@@ -15,8 +15,6 @@ import { useKeepAwake } from 'expo-keep-awake';
 import ThemeSelector from '../components/ThemeSelector';
 import SunsetCanvas from '../components/SunsetCanvas';
 import EclipseCanvas from '../components/EclipseCanvas';
-import AmbientWindowCanvas from '../components/AmbientWindowCanvas'; 
-import ZenPandaCanvas from '../components/ZenPandaCanvas'; // 👈 NEW PANDA CANVAS IMPORTED
 
 // Hooks
 import { useTimerEngine } from '../hooks/useTimerEngine';
@@ -74,17 +72,11 @@ const AmbientScreen = () => {
   // 4. RENDER HELPERS
   const renderActiveCanvas = () => {
     switch(activeTheme) {
-      case 'panda': // 👈 MAPPED THE NEW PANDA THEME HERE
-        return <ZenPandaCanvas progress={progress} isCompleted={isCompleted} />;
-      case 'engawa': 
-        return <AmbientWindowCanvas progress={progress} isCompleted={isCompleted} />;
       case 'lunar':
         return <EclipseCanvas progress={progress} isCompleted={isCompleted} />;
       case 'sunset':
-        return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
       default:
-        // Defaulting to panda as it is the new primary focus
-        return <ZenPandaCanvas progress={progress} isCompleted={isCompleted} />;
+        return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
     }
   };
 
@@ -265,9 +257,8 @@ const styles = StyleSheet.create({
   },
   minimalExitWrapper: {
     position: 'absolute',
-    bottom: 40,
-    width: '100%',
-    alignItems: 'center',
+    bottom: 10,
+    right: 24,
     zIndex: 99,
   },
   exitButton: {
