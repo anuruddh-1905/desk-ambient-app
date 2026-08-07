@@ -6,8 +6,6 @@ const THEMES = [
   { id: 'lunar', icon: '🌑', name: 'Lunar Phase', subtitle: 'Night Moon Cycle' },
 ];
 
-// Split into three parts so VERSION 1.0 and the Email line can carry their
-// own distinct typography — the rest of the paragraphs share one body style.
 const NOTE_VERSION_LINE = 'VERSION 1.0';
 
 const NOTE_BODY = `Thank you for trying the first version of this app.
@@ -24,7 +22,7 @@ const NOTE_EMAIL_ADDRESS = 'anuruddhpratap67@gmail.com';
 const NOTE_CLOSING = 'Thank you for giving this little project a place on your desk.';
 
 export default function ThemeSelector({ onBack, onLaunch }) {
-  const [selectedTheme, setSelectedTheme] = useState('sunset'); // Default to Sun theme
+  const [selectedTheme, setSelectedTheme] = useState('sunset'); 
   const [isNoteVisible, setIsNoteVisible] = useState(false); 
 
   return (
@@ -131,17 +129,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 68,
-    paddingBottom: 30,
+    paddingTop: 60,
+    paddingBottom: 24,
   },
   headerSideLeft: {
     flex: 1,
     alignItems: 'flex-start',
-    paddingVertical: 8,
+    justifyContent: 'center',
   },
   headerSideRight: {
     flex: 1,
     alignItems: 'flex-end',
+    justify: 'center',
   },
   backButtonText: {
     color: '#666666',
@@ -157,25 +156,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   infoButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#F2C879', 
-    backgroundColor: 'rgba(242, 200, 121, 0.12)',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#F2C879',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
-    elevation: 4,
+    justify: 'center',
   },
   infoButtonText: {
-    color: '#F2C879',
-    fontSize: 14,
-    fontWeight: '700',
+    color: '#888888',
+    fontSize: 12,
+    fontWeight: '600',
     fontStyle: 'italic',
+    textAlign: 'center',
+    includeFontPadding: false,
+    lineHeight: 14,
   },
   listContainer: {
     flex: 1,
@@ -217,7 +214,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   themeSubtitle: {
-    color: '#555555',
+    color: '#666666',
     fontSize: 11,
     letterSpacing: 0.5,
   },

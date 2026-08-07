@@ -122,9 +122,10 @@ export default function EclipseCanvas({ progress }) {
     extrapolate: 'clamp',
   });
 
+  // Full moon base fading to blood red eclipse
   const moonBaseColor = progressAnim.interpolate({
-    inputRange: [0, 40, 75, 100],
-    outputRange: ['#FFF9EE', '#D0CCD5', '#8B0000', '#2E0303'],
+    inputRange: [0, 35, 75, 100],
+    outputRange: ['#FFFFFF', '#ECE8F5', '#8B0000', '#2E0303'],
   });
 
   const horizonLightOpacity = progressAnim.interpolate({
@@ -156,11 +157,10 @@ export default function EclipseCanvas({ progress }) {
         <Text style={[styles.starSparkle, { left: '80%', top: '22%', fontSize: 8 }]}>✦</Text>
       </View>
 
-      {/* ---------------- REALISTIC SOFT-ECLIPSE MOON ---------------- */}
+      {/* ---------------- MOON & ECLIPSE ---------------- */}
       <View style={styles.eclipseCenterFrame}>
-        {/* Base Moon Globe */}
+        {/* Base Moon Globe with Inner Clipped Shadow */}
         <Animated.View style={[styles.moonGlobe, { backgroundColor: moonBaseColor }]}>
-          {/* Feathered Atmospheric Shadow Overlay */}
           <Animated.View 
             style={[
               styles.earthShadowCircle, 
@@ -223,11 +223,6 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 80,
     overflow: 'hidden', // Clips shadow strictly inside moon bounds
-    shadowColor: '#FFF9EE',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15, 
-    shadowRadius: 25, 
-    elevation: 4,
   },
   earthShadowCircle: {
     position: 'absolute',
@@ -236,8 +231,7 @@ const styles = StyleSheet.create({
     width: 180, 
     height: 180,
     borderRadius: 90,
-    backgroundColor: '#02020E', // Deep space atmospheric shadow tone
-    // Soft blurred edge effect for umbra/penumbra realism
+    backgroundColor: '#02020E', 
     shadowColor: '#000000',
     shadowOffset: { width: -8, height: 0 },
     shadowOpacity: 0.95,
