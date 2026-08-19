@@ -3,6 +3,7 @@ import { StyleSheet, View, Animated, Easing, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const SILHOUETTE_BLACK = '#000000';
+const GROUND_HEIGHT_PERCENT = '20%'; // was 14% — everything anchored to the ground line moved together
 
 // Clean, static wild grass blades sprouting organically out of the soil line
 function StaticSoilGrass({ baseHeight = 14, offsetLeft, offsetRight }) {
@@ -44,7 +45,7 @@ function SpacedSwayingTree({ height, scale, left, right, swayDeg }) {
   const baseWidth = Math.round(adjustedHeight * 0.60);
 
   return (
-    <View style={[styles.absoluteObject, { bottom: '14%', left, right, width: baseWidth, alignItems: 'center' }]}>
+    <View style={[styles.absoluteObject, { bottom: GROUND_HEIGHT_PERCENT, left, right, width: baseWidth, alignItems: 'center' }]}>
       
       {/* 1. Only the upper foliage layers execute the wind rotation */}
       <Animated.View style={{ width: baseWidth, alignItems: 'center', transform: [{ rotateZ: swayDeg }], transformOrigin: 'bottom center' }}>
@@ -85,7 +86,7 @@ function SpacedSwayingTree({ height, scale, left, right, swayDeg }) {
 // Turbine Structure: Tower pillar is locked. Only the hub blades spin.
 function WindTurbine({ scale, spinDeg, left }) {
   return (
-    <View style={[styles.absoluteObject, { bottom: '14%', left, width: 20, alignItems: 'center' }]}>
+    <View style={[styles.absoluteObject, { bottom: GROUND_HEIGHT_PERCENT, left, width: 20, alignItems: 'center' }]}>
       <View style={styles.turbineContainer}>
         {/* Rigid Tapered Pillar (Unmoving) */}
         <View style={[styles.turbinePillarLower, { transform: [{ scaleX: scale }] }]} />
@@ -98,6 +99,39 @@ function WindTurbine({ scale, spinDeg, left }) {
             <View key={deg} style={[styles.turbineBlade, { transform: [{ rotateZ: `${deg}deg` }] }]} />
           ))}
         </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// NEW: Tiny distant cabin — pitch black during the session, a single small
+// amber window fades in (with a soft bloom) only in the final stretch.
+// Deliberately miniature: ~1/3 the windmill's height, sitting on the
+// horizon line, far right. Opacity-only animation (native-driver safe) —
+// no color interpolation needed since the amber tone is fixed.
+// ---------------------------------------------------------------------------
+const CABIN_WINDOW_COLOR = '#FFB703';
+
+function DistantCabin({ left, right, progressAnim }) {
+  // Fades in only across the final 10% of the session, per spec.
+  const windowOpacity = progressAnim.interpolate({
+    inputRange: [88, 96, 100],
+    outputRange: [0, 0.85, 1],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <View style={[styles.absoluteObject, { bottom: GROUND_HEIGHT_PERCENT, left, right, width: 34, alignItems: 'center' }]}>
+      {/* Roof */}
+      <View style={styles.cabinRoof} />
+      {/* Body */}
+      <View style={styles.cabinBody}>
+        {/* Soft bloom behind the window — layered, low-opacity, fixed warm
+            tone (not shadowRadius — unreliable on Android). */}
+        <Animated.View style={[styles.cabinWindowBloomOuter, { opacity: windowOpacity }]} />
+        <Animated.View style={[styles.cabinWindowBloomInner, { opacity: windowOpacity }]} />
+        <Animated.View style={[styles.cabinWindow, { opacity: windowOpacity }]} />
       </View>
     </View>
   );
@@ -176,6 +210,12 @@ function useWindEngine(progressAnim) {
 
 export default function SunsetCanvas({ progress }) {
   const progressAnim = useRef(new Animated.Value(0)).current;
+  // NEW: separate JS-driven value used ONLY for color interpolation
+  // (sunColor). progressAnim itself runs useNativeDriver: true and feeds
+  // transform/opacity — animating a color off it directly was a latent
+  // version of the exact crash pattern documented in this project's
+  // boundaries brief. Fixing it while already touching this code.
+  const progressAnimJS = useRef(new Animated.Value(0)).current;
   const [canvasHeight, setCanvasHeight] = useState(0);
 
   useEffect(() => {
@@ -185,15 +225,36 @@ export default function SunsetCanvas({ progress }) {
       easing: Easing.linear,
       useNativeDriver: true,
     }).start();
-  }, [progress, progressAnim]);
+    Animated.timing(progressAnimJS, {
+      toValue: progress,
+      duration: 300,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    }).start();
+  }, [progress, progressAnim, progressAnimJS]);
 
   const onCanvasLayout = useCallback((e) => {
     setCanvasHeight(e.nativeEvent.layout.height);
   }, []);
 
   const H = canvasHeight || 700;
+
+  // ---- Sun travel math ------------------------------------------------
+  // Sun wrapper is 90x90, sunCore is 76 (radius 38) centered within it via
+  // alignItems/justifyContent center — so the sun's visual center sits at
+  // (translateY + 45) regardless of scale (scale pivots on the wrapper's
+  // own center, it doesn't shift it).
+  //
+  // Hard constraint solved for: by progress=100, the sun's TOP edge must
+  // be at or below the horizon line, so it's fully hidden behind the
+  // (opaque, higher-zIndex) ground — not just faded via opacity.
+  //   topEdge(100) = center(100) - radius(100)
+  //                = (sunTravelEnd + 45) - (38 * 2.4)
+  //   Solve sunTravelEnd so topEdge(100) == horizonY:
+  //   sunTravelEnd = horizonY - 45 + (38 * 2.4)
+  const horizonY = H * 0.80; // ground now starts at 80% down (was 86%)
   const sunTravelStart = H * 0.16;
-  const sunTravelEnd = H * 0.86;
+  const sunTravelEnd = horizonY - 45 + 38 * 2.4;
 
   const sunTranslateY = progressAnim.interpolate({
     inputRange: [0, 100],
@@ -207,15 +268,30 @@ export default function SunsetCanvas({ progress }) {
     extrapolate: 'clamp',
   });
 
+  // Horizon bleed: a SEPARATE scale applied only to the glow (not the sun
+  // body itself), growing sharply only in the final stretch as the sun
+  // nears/touches the ground — simulating atmospheric refraction squashing
+  // and bleeding the light outward, rather than the glow growing uniformly
+  // across the whole session.
+  const glowBleedScale = progressAnim.interpolate({
+    inputRange: [0, 70, 88, 100],
+    outputRange: [1, 1, 1.35, 2.6],
+    extrapolate: 'clamp',
+  });
+
   const sunFadeOut = progressAnim.interpolate({
     inputRange: [92, 98, 100],
     outputRange: [1, 0.4, 0],
     extrapolate: 'clamp',
   });
 
-  const sunColor = progressAnim.interpolate({
-    inputRange: [0, 40, 75, 100],
-    outputRange: ['#FFCD4D', '#FFAD29', '#E65100', '#BF2600'],
+  // Color interpolation — now driven by the JS-only value.
+  // Physics-based 3-phase palette (Rayleigh scattering): as the sun's light
+  // travels through more atmosphere over the session, shorter wavelengths
+  // scatter away first — gold → orange → deep red.
+  const sunColor = progressAnimJS.interpolate({
+    inputRange: [0, 50, 100],
+    outputRange: ['#FFD166', '#F77F00', '#9D0208'],
   });
 
   const skyDawnOpacity = progressAnim.interpolate({
@@ -289,6 +365,22 @@ export default function SunsetCanvas({ progress }) {
           },
         ]}
       >
+        {/* Bloom — layered, low-opacity, larger ovals behind the core.
+            NOT shadowRadius (unreliable on Android). Fixed warm tone,
+            no color animation needed here. Rendered first = behind core. */}
+        {/* Glow — reverted to layered flat circles (the SVG radial
+            gradient attempt failed to render: its "transparent" edge came
+            out solid opaque black instead of fading, a known risk with
+            animated SVG stop props). This is the same proven technique
+            already used for the lamp/lantern glows elsewhere — just now
+            color-matched to the sun's current phase via sunColor instead
+            of a fixed tint. Wrapped in the horizon-bleed scale so it still
+            "melts" outward near the ground. */}
+        <Animated.View style={{ transform: [{ scale: glowBleedScale }] }}>
+          <Animated.View style={[styles.sunGlowRingOuter, { backgroundColor: sunColor }]} />
+          <Animated.View style={[styles.sunGlowRingMid, { backgroundColor: sunColor }]} />
+          <Animated.View style={[styles.sunGlowRingInner, { backgroundColor: sunColor }]} />
+        </Animated.View>
         <Animated.View style={[styles.sunCore, { backgroundColor: sunColor }]} />
       </Animated.View>
 
@@ -305,11 +397,17 @@ export default function SunsetCanvas({ progress }) {
       <SpacedSwayingTree height={110} scale={1.0} right="16%" swayDeg={treeSwayDeg} />
       <SpacedSwayingTree height={110} scale={0.82} right="4%" swayDeg={treeSwayDeg} />
 
+      {/* NEW: tiny distant cabin, nestled near the large trees, far right */}
+      <DistantCabin right="9%" progressAnim={progressAnim} />
+
       {/* ---------------- ORGANIC SCATTERED SOIL GRASS BLADES ---------------- */}
       <StaticSoilGrass baseHeight={14} offsetLeft="2%" />
       <StaticSoilGrass baseHeight={18} offsetLeft="9%" />
       <StaticSoilGrass baseHeight={15} offsetLeft="26%" />
       <StaticSoilGrass baseHeight={20} offsetLeft="33%" />
+      {/* NEW: sparse tufts in the center-right breathing-room zone (50–75%) */}
+      <StaticSoilGrass baseHeight={11} offsetLeft="58%" />
+      <StaticSoilGrass baseHeight={9} offsetLeft="68%" />
       <StaticSoilGrass baseHeight={16} offsetRight="25%" />
       <StaticSoilGrass baseHeight={22} offsetRight="13%" />
       <StaticSoilGrass baseHeight={15} offsetRight="1%" />
@@ -361,7 +459,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '14%',
+    height: GROUND_HEIGHT_PERCENT,
     backgroundColor: SILHOUETTE_BLACK,
     zIndex: 30, 
   },
@@ -372,7 +470,7 @@ const styles = StyleSheet.create({
   },
   grassSoilGroup: {
     position: 'absolute',
-    bottom: '14%', 
+    bottom: GROUND_HEIGHT_PERCENT, 
     flexDirection: 'row',
     alignItems: 'flex-end',
     zIndex: 20,
@@ -419,5 +517,44 @@ const styles = StyleSheet.create({
     backgroundColor: SILHOUETTE_BLACK,
     bottom: 0,
     transformOrigin: 'bottom center',
+  },
+
+  // -- Distant cabin (~1/3 the windmill's height: windmill ≈110, cabin ≈37) --
+  cabinRoof: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 18,
+    borderRightWidth: 18,
+    borderBottomWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: SILHOUETTE_BLACK,
+  },
+  cabinBody: {
+    width: 30,
+    height: 25,
+    backgroundColor: SILHOUETTE_BLACK,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -1,
+  },
+  cabinWindow: {
+    width: 4,
+    height: 4,
+    backgroundColor: CABIN_WINDOW_COLOR,
+  },
+  cabinWindowBloomInner: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(255, 183, 3, 0.35)',
+  },
+  cabinWindowBloomOuter: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 183, 3, 0.15)',
   },
 });
