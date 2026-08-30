@@ -8,8 +8,9 @@
 import { useEffect, useRef } from 'react';
 import { Audio, InterruptionModeIOS } from 'expo-av';
 
-const TRACK_A_SOURCE = require('../assets/audio/brown_noise.m4a');
-const TRACK_B_SOURCE = require('../assets/audio/evening_wind.m4a');
+// Pointing directly to PCM 16-bit WAV assets for seamless looping
+const TRACK_A_SOURCE = require('../assets/audio/brown_noise.wav');
+const TRACK_B_SOURCE = require('../assets/audio/evening_wind.wav');
 
 // ---------------------------------------------------------------------------
 // Crossfade matrix — pure functions, no side effects, easy to verify in
@@ -91,14 +92,21 @@ export function useAudioManager(progress) {
 
     return () => {
       isMountedRef.current = false;
-      if (soundARef.current) {
-        soundARef.current.unloadAsync().catch(() => {});
-        soundARef.current = null;
-      }
-      if (soundBRef.current) {
-        soundBRef.current.unloadAsync().catch(() => {});
-        soundBRef.current = null;
-      }
+
+      // Graceful micro-fade before unload to prevent pops on manual exit
+      const cleanupTrack = async (soundRef) => {
+        if (!soundRef.current) return;
+        const sound = soundRef.current;
+        soundRef.current = null;
+        try {
+          await sound.setVolumeAsync(0);
+          await sound.stopAsync();
+          await sound.unloadAsync();
+        } catch {}
+      };
+
+      cleanupTrack(soundARef);
+      cleanupTrack(soundBRef);
     };
   }, []);
 
