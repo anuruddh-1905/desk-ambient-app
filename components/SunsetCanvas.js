@@ -127,8 +127,10 @@ function DistantCabin({ left, right, progressAnim }) {
       <View style={styles.cabinRoof} />
       {/* Body */}
       <View style={styles.cabinBody}>
-        {/* Soft bloom behind the window — layered, low-opacity, fixed warm
-            tone (not shadowRadius — unreliable on Android). */}
+        {/* Contained glow around the window itself — reads as light glowing
+            from inside a small room, not spilling out onto the wall/ground
+            (matches the simpler, self-contained approach already used for
+            the cottage window in the Eclipse scene). */}
         <Animated.View style={[styles.cabinWindowBloomOuter, { opacity: windowOpacity }]} />
         <Animated.View style={[styles.cabinWindowBloomInner, { opacity: windowOpacity }]} />
         <Animated.View style={[styles.cabinWindow, { opacity: windowOpacity }]} />
@@ -251,10 +253,10 @@ export default function SunsetCanvas({ progress }) {
   //   topEdge(100) = center(100) - radius(100)
   //                = (sunTravelEnd + 45) - (38 * 2.4)
   //   Solve sunTravelEnd so topEdge(100) == horizonY:
-  //   sunTravelEnd = horizonY - 45 + (38 * 2.4)
+  //   sunTravelEnd = horizonY - 45 + (38 * 2.8)
   const horizonY = H * 0.80; // ground now starts at 80% down (was 86%)
   const sunTravelStart = H * 0.16;
-  const sunTravelEnd = horizonY - 45 + 38 * 2.4;
+  const sunTravelEnd = horizonY - 45 + 38 * 2.8;
 
   const sunTranslateY = progressAnim.interpolate({
     inputRange: [0, 100],
@@ -264,20 +266,48 @@ export default function SunsetCanvas({ progress }) {
 
   const sunScale = progressAnim.interpolate({
     inputRange: [0, 100],
-    outputRange: [1, 2.4],
+    outputRange: [1, 2.8],
     extrapolate: 'clamp',
   });
 
-  // Horizon bleed: a SEPARATE scale applied only to the glow (not the sun
-  // body itself), growing sharply only in the final stretch as the sun
-  // nears/touches the ground — simulating atmospheric refraction squashing
-  // and bleeding the light outward, rather than the glow growing uniformly
-  // across the whole session.
-  const glowBleedScale = progressAnim.interpolate({
-    inputRange: [0, 70, 88, 100],
-    outputRange: [1, 1, 1.35, 2.6],
-    extrapolate: 'clamp',
-  });
+  // ---- Geometric submersion points (for color anchoring) --------------
+  // The color breakpoints below were previously tied to flat progress
+  // percentages with NO connection to the sun's actual visual position —
+  // meaning "reddish" could kick in before or after it geometrically
+  // starts touching the ground, depending on device height. Solving here
+  // for the real progress values where the sun's bottom edge (a) first
+  // touches the horizon, and (b) is 10% submerged, using the same linear
+  // position/scale functions that already drive its motion.
+  //
+  // center(p) = translateY(p) + 45; radius(p) = 38 * scale(p)
+  // bottomEdge(p) = center(p) + radius(p)
+  // "submerged fraction f" means: bottomEdge(p) - horizonY = f * 2*radius(p)
+  // Both translateY(p) and scale(p) are linear in p, so this solves to a
+  // simple linear equation — see derivation in comments below.
+  const SUN_SCALE_MIN = 1;
+  const SUN_SCALE_MAX = 2.8;
+  const k1 = sunTravelStart + 45 - horizonY;
+  const k2 = sunTravelEnd - sunTravelStart;
+  const solveSubmersionProgress = (fraction) => {
+    const m = 2 * fraction - 1;
+    const p = (100 * (m * 38 - k1)) / (k2 - m * 38 * (SUN_SCALE_MAX - SUN_SCALE_MIN));
+    return p;
+  };
+  // Clamp with sensible fallbacks in case an unusual canvas height ever
+  // produces an out-of-order result — keeps the interpolation inputs
+  // strictly increasing no matter what.
+  const rawTouchP = solveSubmersionProgress(0);
+  const rawTenPctP = solveSubmersionProgress(0.1);
+  const rawHalfSubmergedP = solveSubmersionProgress(0.5);
+  // Widened minimum gaps (were +1 only, which let stops crowd together on
+  // some device heights and produce a visibly sudden jump) — now enforcing
+  // real spacing so the transition always reads as gradual.
+  const touchProgress = Math.min(85, Math.max(55, rawTouchP));
+  const tenPctSubmergedProgress = Math.min(90, Math.max(touchProgress + 12, rawTenPctP));
+  // Stars now keyed to the sun being HALF submerged, not a flat late-session
+  // percentage — matches the reference where stars appear against a still
+  // richly-colored dusk sky, not only once it's gone fully dark.
+  const halfSubmergedProgress = Math.min(92, Math.max(tenPctSubmergedProgress + 3, rawHalfSubmergedP));
 
   const sunFadeOut = progressAnim.interpolate({
     inputRange: [92, 98, 100],
@@ -285,34 +315,49 @@ export default function SunsetCanvas({ progress }) {
     extrapolate: 'clamp',
   });
 
+  // Shifted ~7% earlier per feedback — now with a real enforced minimum
+  // gap (was +1 only) so this adjustment can't re-compress the spacing.
+  const adjustedTouch = Math.max(45, touchProgress - 7);
+  const adjustedTenPct = Math.max(adjustedTouch + 12, tenPctSubmergedProgress - 7);
+
   // Color interpolation — now driven by the JS-only value.
-  // Physics-based 3-phase palette (Rayleigh scattering): as the sun's light
-  // travels through more atmosphere over the session, shorter wavelengths
-  // scatter away first — gold → orange → deep red.
+  // The middle two stops are anchored to the sun's REAL geometric position
+  // (touch point / 10%-submerged point solved above), not arbitrary flat
+  // percentages — so "turning reddish" now actually lines up with the sun
+  // visually nearing and sinking into the ground.
   const sunColor = progressAnimJS.interpolate({
-    inputRange: [0, 50, 100],
-    outputRange: ['#FFD166', '#F77F00', '#9D0208'],
+    inputRange: [0, 20, 40, adjustedTouch, adjustedTenPct, 100],
+    outputRange: ['#FFF1B8', '#FFD166', '#FFA630', '#F77F00', '#D62828', '#8B0000'],
   });
 
   const skyDawnOpacity = progressAnim.interpolate({
-    inputRange: [0, 22, 50],
+    inputRange: [0, 18, 30],
     outputRange: [1, 1, 0],
     extrapolate: 'clamp',
   });
 
+  // Nudged slightly later than the previous pass (8→13, 25→32) — a modest
+  // delay per feedback that it was arriving a touch too early, without
+  // reverting to the original much-later timing.
   const skyDuskOpacity = progressAnim.interpolate({
-    inputRange: [15, 32, 75, 92],
+    inputRange: [13, 32, 92, 100],
     outputRange: [0, 1, 1, 0],
     extrapolate: 'clamp',
   });
 
+  // Night/stars now only arrive in the final ~12–15% of the session,
+  // finishing exactly at progress 100 — the same point the sun's own
+  // disappearance math (sunTravelEnd) guarantees it's fully hidden. Was
+  // 68→88 before, which meant full darkness while the sun was still
+  // visibly setting.
   const skyNightOpacity = progressAnim.interpolate({
-    inputRange: [68, 88, 100],
-    outputRange: [0, 1, 1],
+    inputRange: [85, 100],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
   });
 
   const starsOpacity = progressAnim.interpolate({
-    inputRange: [75, 95],
+    inputRange: [Math.max(0, halfSubmergedProgress - 5), halfSubmergedProgress + 10],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
@@ -337,7 +382,7 @@ export default function SunsetCanvas({ progress }) {
       </Animated.View>
 
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: skyDuskOpacity }]}>
-        <LinearGradient colors={['#1E1035', '#4A1540', '#880B39', '#F95738']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['#12112B', '#2C1E4A', '#7A2B54', '#C1442E', '#E8632E']} style={StyleSheet.absoluteFill} />
       </Animated.View>
 
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: skyNightOpacity }]}>
@@ -346,12 +391,20 @@ export default function SunsetCanvas({ progress }) {
 
       {/* ---------------- STARS LAYERS ---------------- */}
       <Animated.View style={[styles.starContainer, { opacity: starsOpacity }]}>
-        <Text style={[styles.starSparkle, { left: '15%', top: '15%', fontSize: 26 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { right: '20%', top: '20%', fontSize: 20 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { left: '45%', top: '8%', fontSize: 24 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { right: '12%', top: '35%', fontSize: 16 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { left: '8%', top: '32%', fontSize: 18 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { left: '65%', top: '14%', fontSize: 22 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { left: '15%', top: '20%', fontSize: 9 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { right: '20%', top: '25%', fontSize: 7 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { left: '45%', top: '14%', fontSize: 8 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { right: '12%', top: '38%', fontSize: 6 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { left: '8%', top: '36%', fontSize: 7 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { left: '65%', top: '19%', fontSize: 8 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { left: '30%', top: '29%', fontSize: 6 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { right: '35%', top: '16%', fontSize: 7 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { right: '5%', top: '32%', fontSize: 6 }]}>✦</Text>
+        {/* NEW: a few extra, filling out gaps without crowding */}
+        <Text style={[styles.starSparkle, { left: '55%', top: '22%', fontSize: 6 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { left: '22%', top: '17%', fontSize: 7 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { right: '28%', top: '33%', fontSize: 6 }]}>✦</Text>
+        <Text style={[styles.starSparkle, { left: '75%', top: '30%', fontSize: 7 }]}>✦</Text>
       </Animated.View>
 
       {/* ---------------- THE SUN GLOBE ---------------- */}
@@ -365,22 +418,11 @@ export default function SunsetCanvas({ progress }) {
           },
         ]}
       >
-        {/* Bloom — layered, low-opacity, larger ovals behind the core.
-            NOT shadowRadius (unreliable on Android). Fixed warm tone,
-            no color animation needed here. Rendered first = behind core. */}
-        {/* Glow — reverted to layered flat circles (the SVG radial
-            gradient attempt failed to render: its "transparent" edge came
-            out solid opaque black instead of fading, a known risk with
-            animated SVG stop props). This is the same proven technique
-            already used for the lamp/lantern glows elsewhere — just now
-            color-matched to the sun's current phase via sunColor instead
-            of a fixed tint. Wrapped in the horizon-bleed scale so it still
-            "melts" outward near the ground. */}
-        <Animated.View style={{ transform: [{ scale: glowBleedScale }] }}>
-          <Animated.View style={[styles.sunGlowRingOuter, { backgroundColor: sunColor }]} />
-          <Animated.View style={[styles.sunGlowRingMid, { backgroundColor: sunColor }]} />
-          <Animated.View style={[styles.sunGlowRingInner, { backgroundColor: sunColor }]} />
-        </Animated.View>
+        {/* Glow attempts (SVG radial gradient, then a flat translucent
+            dome) both failed for related reasons: plain Views cannot
+            produce true soft falloff. Removed rather than attempt a third
+            hacky workaround. The sun's own growth (scaling to 2.8x) already
+            gives it presence near the end without a fake halo. */}
         <Animated.View style={[styles.sunCore, { backgroundColor: sunColor }]} />
       </Animated.View>
 
@@ -408,8 +450,6 @@ export default function SunsetCanvas({ progress }) {
       {/* NEW: sparse tufts in the center-right breathing-room zone (50–75%) */}
       <StaticSoilGrass baseHeight={11} offsetLeft="58%" />
       <StaticSoilGrass baseHeight={9} offsetLeft="68%" />
-      <StaticSoilGrass baseHeight={16} offsetRight="25%" />
-      <StaticSoilGrass baseHeight={22} offsetRight="13%" />
       <StaticSoilGrass baseHeight={15} offsetRight="1%" />
 
       {/* ---------------- FLAT SOLID GROUND CONTAINER ---------------- */}
@@ -431,9 +471,10 @@ const styles = StyleSheet.create({
   starSparkle: {
     position: 'absolute',
     color: '#FFFFFF',
-    textShadowColor: 'rgba(255, 255, 255, 0.85)',
+    opacity: 0.75,
+    textShadowColor: 'rgba(255, 255, 255, 0.5)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+    textShadowRadius: 2,
   },
   sunWrapper: {
     position: 'absolute',
