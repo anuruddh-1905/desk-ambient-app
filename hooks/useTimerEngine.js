@@ -14,6 +14,13 @@ export function useTimerEngine(hours, minutes, seconds, isActive, onComplete) {
   const startTimeRef = useRef(null);
   const totalSecondsRef = useRef(totalSeconds);
 
+  // FIX 1: Safely store the callback in a ref to avoid infinite re-renders 
+  // and satisfy ESLint without adding it to the interval's dependencies.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
   // Sync state cleanly if the user changes inputs on screen 1
   useEffect(() => {
     if (!isActive) {
@@ -22,7 +29,8 @@ export function useTimerEngine(hours, minutes, seconds, isActive, onComplete) {
       setIsCompleted(false);
       totalSecondsRef.current = totalSeconds;
     }
-  }, [hours, minutes, seconds, isActive]);
+  // FIX 2: Added 'totalSeconds' to the dependencies array to clear the warning
+  }, [hours, minutes, seconds, isActive, totalSeconds]); 
 
   useEffect(() => {
     // If the workspace isn't launched, don't spin up the interval loop
@@ -43,7 +51,8 @@ export function useTimerEngine(hours, minutes, seconds, isActive, onComplete) {
       if (remainingTime <= 0) {
         if (intervalRef.current) clearInterval(intervalRef.current);
         setIsCompleted(true);
-        if (onComplete) onComplete();
+        // Call the ref safely
+        if (onCompleteRef.current) onCompleteRef.current();
       }
     }, 1000);
 

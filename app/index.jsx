@@ -18,6 +18,52 @@ import EclipseCanvas from '../components/EclipseCanvas';
 
 // Hooks
 import { useTimerEngine } from '../hooks/useTimerEngine';
+import { useAudioManager } from '../hooks/useAudioManager';
+
+/**
+ * ActiveSession Component
+ * Extracted so the audio manager and timer engine only mount (and play audio)
+ * when the session is actually running. When this unmounts, audio stops.
+ */
+const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
+  const { progress, isCompleted } = useTimerEngine(
+    hours, 
+    minutes, 
+    seconds, 
+    true, 
+    () => { console.log("Session completed."); }
+  );
+
+  // Audio engine now mounts ONLY when the timer is active
+  useAudioManager(progress);
+
+  const renderActiveCanvas = () => {
+    switch(activeTheme) {
+      case 'lunar':
+        return <EclipseCanvas progress={progress} isCompleted={isCompleted} />;
+      case 'sunset':
+      default:
+        return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
+    }
+  };
+
+  return (
+    <View style={[styles.container, styles.activeCanvas]}>
+      <StatusBar hidden />
+      
+      {renderActiveCanvas()}
+      
+      <View style={styles.minimalExitWrapper}>
+        <TouchableOpacity 
+          style={styles.exitButton} 
+          onPress={onExit}
+        >
+          <Text style={styles.exitButtonText}>END SESSION</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
 
 /**
  * AmbientScreen - Main Entry Point
@@ -32,17 +78,7 @@ const AmbientScreen = () => {
   const [seconds, setSeconds] = useState('00');
   const [activeTheme, setActiveTheme] = useState(null); 
 
-  // 2. TIMER ENGINE
-  const isEngineActive = currentStep === 'active';
-  const { progress, isCompleted } = useTimerEngine(
-    hours, 
-    minutes, 
-    seconds, 
-    isEngineActive, 
-    () => { console.log("Session completed."); }
-  );
-
-  // 3. INPUT UTILITY OPERATIONS
+  // 2. INPUT UTILITY OPERATIONS
   const handleTextChange = (text, setter, max) => {
     const cleanNum = text.replace(/[^0-9]/g, '');
     if (cleanNum.length <= 2) {
@@ -69,18 +105,7 @@ const AmbientScreen = () => {
 
   const isTimeValid = totalSeconds > 0;
 
-  // 4. RENDER HELPERS
-  const renderActiveCanvas = () => {
-    switch(activeTheme) {
-      case 'lunar':
-        return <EclipseCanvas progress={progress} isCompleted={isCompleted} />;
-      case 'sunset':
-      default:
-        return <SunsetCanvas progress={progress} isCompleted={isCompleted} />;
-    }
-  };
-
-  // 5. SCREEN ROUTING
+  // 3. SCREEN ROUTING
   
   // THEME SELECTION SCREEN
   if (currentStep === 'theme') {
@@ -98,20 +123,13 @@ const AmbientScreen = () => {
   // ACTIVE TIMER SCREEN
   if (currentStep === 'active') {
     return (
-      <View style={[styles.container, styles.activeCanvas]}>
-        <StatusBar hidden />
-        
-        {renderActiveCanvas()}
-        
-        <View style={styles.minimalExitWrapper}>
-          <TouchableOpacity 
-            style={styles.exitButton} 
-            onPress={() => setCurrentStep('input')}
-          >
-            <Text style={styles.exitButtonText}>END SESSION</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ActiveSession 
+        hours={hours} 
+        minutes={minutes} 
+        seconds={seconds} 
+        activeTheme={activeTheme} 
+        onExit={() => setCurrentStep('input')} 
+      />
     );
   }
 
