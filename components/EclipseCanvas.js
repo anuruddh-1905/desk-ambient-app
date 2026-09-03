@@ -69,7 +69,7 @@ function WindTurbine() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. RIGHT FOREGROUND CLUSTER
+// 3. RIGHT FOREGROUND CLUSTER (de-congested: 3 trees -> 2)
 // ---------------------------------------------------------------------------
 function ForegroundCluster({ eclipseProgress }) {
   const windowGlowOpacity = eclipseProgress.interpolate({
@@ -80,9 +80,11 @@ function ForegroundCluster({ eclipseProgress }) {
 
   return (
     <View style={styles.rightClusterWrapper}>
-      <SilhouettePine scale={1.0} right={130} bottom={0} /> 
-      <SilhouettePine scale={1.5} right={85} bottom={0} />  
-      <SilhouettePine scale={2.0} right={35} bottom={0} />  
+      {/* Medium tree, pulled further left (right:100, was 85) so its
+          branches don't visually clash with the large tree below */}
+      <SilhouettePine scale={1.5} right={100} bottom={0} />
+      {/* Largest tree, kept close to the cabin to frame it */}
+      <SilhouettePine scale={2.0} right={35} bottom={0} />
 
       <View style={styles.cottageBlock}>
         <View style={styles.cottageRoof} />
@@ -180,6 +182,10 @@ export default function EclipseCanvas({ progress }) {
 
         <WindTurbine />
 
+        {/* Bridging tree — fills the empty middle-right gap between the
+            (now further-left) turbine and the right-side cabin cluster */}
+        <SilhouettePine scale={1.0} left="58%" bottom={0} />
+
         <ForegroundCluster eclipseProgress={progressAnim} />
       </View>
 
@@ -253,7 +259,7 @@ const styles = StyleSheet.create({
   turbineWrapper: {
     position: 'absolute',
     bottom: 0,
-    left: '32%', 
+    left: '25%', 
     alignItems: 'center',
     justifyContent: 'flex-end',
     height: 120,
