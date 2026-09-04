@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Animated, Easing, Text } from 'react-native';
+import { StyleSheet, View, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const SILHOUETTE_BLACK = '#000000';
@@ -72,9 +72,10 @@ function WindTurbine() {
 // 3. RIGHT FOREGROUND CLUSTER
 // ---------------------------------------------------------------------------
 function ForegroundCluster({ eclipseProgress }) {
+  // Awakens softly at the halfway point (50%), fully warming by totality
   const windowGlowOpacity = eclipseProgress.interpolate({
-    inputRange: [0, 85, 95, 100],
-    outputRange: [0, 0, 1, 1],
+    inputRange: [0, 50, 75, 100],
+    outputRange: [0, 0, 0.45, 1.0],
     extrapolate: 'clamp',
   });
 
@@ -93,7 +94,7 @@ function ForegroundCluster({ eclipseProgress }) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. SKY ATMOSPHERE
+// 4. SKY ATMOSPHERE (Smooth 3-Phase Crossfade)
 // ---------------------------------------------------------------------------
 function SkyAtmosphere({ progressAnim }) {
   const phaseAOpacity = progressAnim.interpolate({
@@ -125,13 +126,15 @@ function SkyAtmosphere({ progressAnim }) {
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: phaseBOpacity }]}>
         <LinearGradient
-          colors={['#010206', '#02040A', '#060B18', '#0A101E', '#0C1526']}
+          colors={['#010206', '#02040A', '#060B18', '#0A101E', '#0E172A']}
+          locations={[0, 0.55, 0.78, 0.90, 1.0]}
           style={StyleSheet.absoluteFill}
         />
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: phaseCOpacity }]}>
         <LinearGradient
-          colors={['#010308', '#02040A', '#04070F', '#060B18', '#080E1C']}
+          colors={['#010308', '#02040A', '#050914', '#080E1E', '#0B132B']}
+          locations={[0, 0.50, 0.75, 0.90, 1.0]}
           style={StyleSheet.absoluteFill}
         />
       </Animated.View>
@@ -140,35 +143,37 @@ function SkyAtmosphere({ progressAnim }) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. STAR ENGINE
+// 5. STAR ENGINE (Balanced Spatial Coordinates & Reliable Visibility)
 // ---------------------------------------------------------------------------
 const STAR_COLOR_BASE_A = '#E2E8F0';
 const STAR_COLOR_BASE_B = '#CBD5E1';
-const STAR_COLOR_WARM = '#FEF3C7'; 
-const STAR_COLOR_COOL = '#E0F2FE'; 
+const STAR_COLOR_WARM = '#FEF3C7';
+const STAR_COLOR_COOL = '#BAE6FD';
 
 const STAR_DATA = [
-  // Tier 3
-  { tier: 3, right: '12%', top: '8%', size: 8, color: STAR_COLOR_BASE_A, baseOpacity: 0.68, animated: false },
-  { tier: 3, left: '72%', top: '28%', size: 7, color: STAR_COLOR_BASE_B, baseOpacity: 0.63, animated: false },
-  // Tier 2
-  { tier: 2, left: '78%', top: '14%', size: 2, color: STAR_COLOR_BASE_A, baseOpacity: 0.48, animated: false },
-  { tier: 2, right: '30%', top: '34%', size: 2, color: STAR_COLOR_WARM, baseOpacity: 0.47, animated: true, duration: 11000, delay: 400 },
-  { tier: 2, left: '85%', top: '40%', size: 2, color: STAR_COLOR_BASE_B, baseOpacity: 0.52, animated: false },
-  // Tier 1
-  { tier: 1, left: '6%', top: '12%', size: 1.2, color: STAR_COLOR_BASE_A, baseOpacity: 0.22, animated: false },
-  { tier: 1, left: '18%', top: '30%', size: 1.4, color: STAR_COLOR_BASE_B, baseOpacity: 0.25, animated: true, duration: 8000, delay: 0 },
-  { tier: 1, left: '38%', top: '6%', size: 1.0, color: STAR_COLOR_BASE_A, baseOpacity: 0.18, animated: false },
-  { tier: 1, right: '42%', top: '20%', size: 1.3, color: STAR_COLOR_BASE_B, baseOpacity: 0.24, animated: false },
-  { tier: 1, left: '62%', top: '10%', size: 1.1, color: STAR_COLOR_BASE_A, baseOpacity: 0.20, animated: false },
-  { tier: 1, right: '6%', top: '22%', size: 1.5, color: STAR_COLOR_COOL, baseOpacity: 0.27, animated: false },
-  { tier: 1, left: '90%', top: '6%', size: 1.2, color: STAR_COLOR_BASE_B, baseOpacity: 0.21, animated: false },
-  { tier: 1, right: '50%', top: '38%', size: 1.3, color: STAR_COLOR_BASE_A, baseOpacity: 0.23, animated: false },
-  { tier: 1, left: '10%', top: '42%', size: 1.0, color: STAR_COLOR_BASE_B, baseOpacity: 0.19, animated: false },
-  { tier: 1, left: '70%', top: '44%', size: 1.4, color: STAR_COLOR_BASE_A, baseOpacity: 0.26, animated: true, duration: 14000, delay: 800 },
-  { tier: 1, right: '22%', top: '42%', size: 1.1, color: STAR_COLOR_BASE_B, baseOpacity: 0.20, animated: false },
-  { tier: 1, left: '30%', top: '16%', size: 1.3, color: STAR_COLOR_BASE_A, baseOpacity: 0.24, animated: false },
-  { tier: 1, right: '15%', top: '36%', size: 1.2, color: STAR_COLOR_BASE_B, baseOpacity: 0.22, animated: false },
+  // Tier 3 — Focal Accent Sparkles (2)
+  { tier: 3, right: '14%', top: '10%', size: 9, color: STAR_COLOR_BASE_A, baseOpacity: 0.72, animated: false },
+  { tier: 3, left: '16%', top: '18%', size: 8, color: STAR_COLOR_BASE_B, baseOpacity: 0.68, animated: false },
+
+  // Tier 2 — Mid-Luminance Stars (4: balanced left & right)
+  { tier: 2, left: '28%', top: '12%', size: 2.5, color: STAR_COLOR_BASE_A, baseOpacity: 0.58, animated: false },
+  { tier: 2, right: '28%', top: '30%', size: 2.5, color: STAR_COLOR_WARM, baseOpacity: 0.55, animated: true, duration: 11000, delay: 400 },
+  { tier: 2, left: '8%', top: '38%', size: 2.2, color: STAR_COLOR_COOL, baseOpacity: 0.52, animated: false },
+  { tier: 2, right: '12%', top: '44%', size: 2.4, color: STAR_COLOR_BASE_B, baseOpacity: 0.56, animated: false },
+
+  // Tier 1 — Micro-Background (12: distributed with reliable 2px floor)
+  { tier: 1, left: '7%', top: '14%', size: 1.8, color: STAR_COLOR_BASE_A, baseOpacity: 0.38, animated: false },
+  { tier: 1, left: '22%', top: '32%', size: 2.0, color: STAR_COLOR_BASE_B, baseOpacity: 0.40, animated: true, duration: 8000, delay: 0 },
+  { tier: 1, left: '38%', top: '8%', size: 1.8, color: STAR_COLOR_BASE_A, baseOpacity: 0.36, animated: false },
+  { tier: 1, left: '42%', top: '36%', size: 2.0, color: STAR_COLOR_BASE_B, baseOpacity: 0.38, animated: false },
+  { tier: 1, left: '62%', top: '12%', size: 1.8, color: STAR_COLOR_BASE_A, baseOpacity: 0.36, animated: false },
+  { tier: 1, right: '8%', top: '22%', size: 2.2, color: STAR_COLOR_COOL, baseOpacity: 0.42, animated: false },
+  { tier: 1, right: '40%', top: '14%', size: 1.8, color: STAR_COLOR_BASE_B, baseOpacity: 0.36, animated: false },
+  { tier: 1, right: '48%', top: '36%', size: 2.0, color: STAR_COLOR_BASE_A, baseOpacity: 0.38, animated: false },
+  { tier: 1, left: '12%', top: '46%', size: 1.8, color: STAR_COLOR_BASE_B, baseOpacity: 0.34, animated: false },
+  { tier: 1, left: '72%', top: '42%', size: 2.2, color: STAR_COLOR_BASE_A, baseOpacity: 0.40, animated: true, duration: 14000, delay: 800 },
+  { tier: 1, right: '22%', top: '42%', size: 1.8, color: STAR_COLOR_BASE_B, baseOpacity: 0.36, animated: false },
+  { tier: 1, right: '16%', top: '34%', size: 2.0, color: STAR_COLOR_BASE_B, baseOpacity: 0.38, animated: false },
 ];
 
 function StarDot({ d, tierMultiplier }) {
@@ -178,7 +183,7 @@ function StarDot({ d, tierMultiplier }) {
     if (!d.animated) return;
 
     const peak = Math.min(1, d.baseOpacity + 0.15);
-    const trough = Math.max(0.05, d.baseOpacity - 0.15);
+    const trough = Math.max(0.12, d.baseOpacity - 0.15);
 
     const loop = Animated.loop(
       Animated.sequence([
@@ -204,7 +209,6 @@ function StarDot({ d, tierMultiplier }) {
     };
   }, [twinkleValue, d.animated, d.baseOpacity, d.duration, d.delay]);
 
-  // FIX: Nested opacity structure prevents JS and Native driver conflict
   const wrapperOpacity = d.tier === 3 ? 1 : tierMultiplier;
   const innerOpacity = d.animated ? twinkleValue : d.baseOpacity;
   const positionStyle = { position: 'absolute', left: d.left, right: d.right, top: d.top };
@@ -235,14 +239,14 @@ function StarDot({ d, tierMultiplier }) {
 
 function StarField({ progressAnim }) {
   const tier1Multiplier = progressAnim.interpolate({
-    inputRange: [0, 75, 88],
-    outputRange: [0, 0, 1],
+    inputRange: [0, 75, 100],
+    outputRange: [0.45, 0.55, 1.0],
     extrapolate: 'clamp',
   });
 
   const tier2Multiplier = progressAnim.interpolate({
-    inputRange: [0, 75, 88],
-    outputRange: [0.35, 0.35, 1],
+    inputRange: [0, 75, 100],
+    outputRange: [0.65, 0.75, 1.0],
     extrapolate: 'clamp',
   });
 
@@ -266,37 +270,38 @@ export default function EclipseCanvas({ progress }) {
       toValue: progress,
       duration: 300,
       easing: Easing.linear,
-      useNativeDriver: false, 
+      useNativeDriver: false,
     }).start();
   }, [progress, progressAnim]);
 
+  // Ends at 4 instead of 24, leaving a razor-thin, elegant crescent
   const shadowTranslateX = progressAnim.interpolate({
     inputRange: [0, 100],
-    outputRange: [160, -10], 
+    outputRange: [160, 4],
     extrapolate: 'clamp',
   });
 
   const shadowOpacity = progressAnim.interpolate({
     inputRange: [0, 10, 90, 100],
-    outputRange: [0, 0.92, 0.95, 0.98],
+    outputRange: [0, 0.94, 0.96, 0.97],
     extrapolate: 'clamp',
   });
 
+  // Shifts from pure starlight to a visible, rich blood moon
   const moonBaseColor = progressAnim.interpolate({
     inputRange: [0, 35, 75, 100],
-    outputRange: ['#FFFFFF', '#ECE8F5', '#8B0000', '#2E0303'],
+    outputRange: ['#FFFFFF', '#EAE6F3', '#C53030', '#8B1E1E'],
   });
 
   return (
     <View style={styles.canvasFrame}>
-      
-      {/* ---------------- SKY ATMOSPHERE ---------------- */}
+      {/* SKY ATMOSPHERE */}
       <SkyAtmosphere progressAnim={progressAnim} />
 
-      {/* ---------------- LAYERED STARFIELD ---------------- */}
+      {/* LAYERED STARFIELD */}
       <StarField progressAnim={progressAnim} />
 
-      {/* ---------------- MOON & ECLIPSE ---------------- */}
+      {/* MOON & ECLIPSE */}
       <View style={styles.eclipseCenterFrame}>
         <Animated.View style={[styles.moonGlobe, { backgroundColor: moonBaseColor }]}>
           <Animated.View 
@@ -311,7 +316,7 @@ export default function EclipseCanvas({ progress }) {
         </Animated.View>
       </View>
 
-      {/* ---------------- RURAL HORIZON ---------------- */}
+      {/* RURAL HORIZON */}
       <View style={styles.horizonMatting}>
         <SilhouettePine scale={0.7} left="6%" bottom={0} />
         <SilhouettePine scale={0.9} left="16%" bottom={0} />
@@ -323,7 +328,7 @@ export default function EclipseCanvas({ progress }) {
         <ForegroundCluster eclipseProgress={progressAnim} />
       </View>
 
-      {/* ---------------- UI SAFE ZONE ---------------- */}
+      {/* UI SAFE ZONE */}
       <View style={styles.foregroundContainer} />
     </View>
   );
@@ -339,14 +344,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   starAccentGlyph: {
-    // position absolute moved to wrapper
-    textShadowColor: 'rgba(255, 255, 255, 0.35)',
+    textShadowColor: 'rgba(255, 255, 255, 0.45)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
-  starPinpoint: {
-    // position absolute moved to wrapper
-  },
+  starPinpoint: {},
   eclipseCenterFrame: {
     position: 'absolute',
     left: '50%',
@@ -372,7 +374,7 @@ const styles = StyleSheet.create({
     width: 180, 
     height: 180,
     borderRadius: 90,
-    backgroundColor: '#02020E', 
+    backgroundColor: '#030514', 
     shadowColor: '#000000',
     shadowOffset: { width: -8, height: 0 },
     shadowOpacity: 0.95,
