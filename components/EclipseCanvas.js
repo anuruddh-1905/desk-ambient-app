@@ -69,7 +69,7 @@ function WindTurbine() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. RIGHT FOREGROUND CLUSTER (de-congested: 3 trees -> 2)
+// 3. RIGHT FOREGROUND CLUSTER
 // ---------------------------------------------------------------------------
 function ForegroundCluster({ eclipseProgress }) {
   const windowGlowOpacity = eclipseProgress.interpolate({
@@ -80,10 +80,7 @@ function ForegroundCluster({ eclipseProgress }) {
 
   return (
     <View style={styles.rightClusterWrapper}>
-      {/* Medium tree, pulled further left (right:100, was 85) so its
-          branches don't visually clash with the large tree below */}
       <SilhouettePine scale={1.5} right={100} bottom={0} />
-      {/* Largest tree, kept close to the cabin to frame it */}
       <SilhouettePine scale={2.0} right={35} bottom={0} />
 
       <View style={styles.cottageBlock}>
@@ -96,7 +93,170 @@ function ForegroundCluster({ eclipseProgress }) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. MASTER CANVAS
+// 4. SKY ATMOSPHERE
+// ---------------------------------------------------------------------------
+function SkyAtmosphere({ progressAnim }) {
+  const phaseAOpacity = progressAnim.interpolate({
+    inputRange: [0, 68, 80],
+    outputRange: [1, 1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const phaseBOpacity = progressAnim.interpolate({
+    inputRange: [68, 80, 84, 92],
+    outputRange: [0, 1, 1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const phaseCOpacity = progressAnim.interpolate({
+    inputRange: [84, 92, 100],
+    outputRange: [0, 1, 1],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: phaseAOpacity }]}>
+        <LinearGradient
+          colors={['#000003', '#030611', '#080D22', '#101936']}
+          locations={[0, 0.60, 0.82, 1.0]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: phaseBOpacity }]}>
+        <LinearGradient
+          colors={['#010206', '#02040A', '#060B18', '#0A101E', '#0C1526']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: phaseCOpacity }]}>
+        <LinearGradient
+          colors={['#010308', '#02040A', '#04070F', '#060B18', '#080E1C']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 5. STAR ENGINE
+// ---------------------------------------------------------------------------
+const STAR_COLOR_BASE_A = '#E2E8F0';
+const STAR_COLOR_BASE_B = '#CBD5E1';
+const STAR_COLOR_WARM = '#FEF3C7'; 
+const STAR_COLOR_COOL = '#E0F2FE'; 
+
+const STAR_DATA = [
+  // Tier 3
+  { tier: 3, right: '12%', top: '8%', size: 8, color: STAR_COLOR_BASE_A, baseOpacity: 0.68, animated: false },
+  { tier: 3, left: '72%', top: '28%', size: 7, color: STAR_COLOR_BASE_B, baseOpacity: 0.63, animated: false },
+  // Tier 2
+  { tier: 2, left: '78%', top: '14%', size: 2, color: STAR_COLOR_BASE_A, baseOpacity: 0.48, animated: false },
+  { tier: 2, right: '30%', top: '34%', size: 2, color: STAR_COLOR_WARM, baseOpacity: 0.47, animated: true, duration: 11000, delay: 400 },
+  { tier: 2, left: '85%', top: '40%', size: 2, color: STAR_COLOR_BASE_B, baseOpacity: 0.52, animated: false },
+  // Tier 1
+  { tier: 1, left: '6%', top: '12%', size: 1.2, color: STAR_COLOR_BASE_A, baseOpacity: 0.22, animated: false },
+  { tier: 1, left: '18%', top: '30%', size: 1.4, color: STAR_COLOR_BASE_B, baseOpacity: 0.25, animated: true, duration: 8000, delay: 0 },
+  { tier: 1, left: '38%', top: '6%', size: 1.0, color: STAR_COLOR_BASE_A, baseOpacity: 0.18, animated: false },
+  { tier: 1, right: '42%', top: '20%', size: 1.3, color: STAR_COLOR_BASE_B, baseOpacity: 0.24, animated: false },
+  { tier: 1, left: '62%', top: '10%', size: 1.1, color: STAR_COLOR_BASE_A, baseOpacity: 0.20, animated: false },
+  { tier: 1, right: '6%', top: '22%', size: 1.5, color: STAR_COLOR_COOL, baseOpacity: 0.27, animated: false },
+  { tier: 1, left: '90%', top: '6%', size: 1.2, color: STAR_COLOR_BASE_B, baseOpacity: 0.21, animated: false },
+  { tier: 1, right: '50%', top: '38%', size: 1.3, color: STAR_COLOR_BASE_A, baseOpacity: 0.23, animated: false },
+  { tier: 1, left: '10%', top: '42%', size: 1.0, color: STAR_COLOR_BASE_B, baseOpacity: 0.19, animated: false },
+  { tier: 1, left: '70%', top: '44%', size: 1.4, color: STAR_COLOR_BASE_A, baseOpacity: 0.26, animated: true, duration: 14000, delay: 800 },
+  { tier: 1, right: '22%', top: '42%', size: 1.1, color: STAR_COLOR_BASE_B, baseOpacity: 0.20, animated: false },
+  { tier: 1, left: '30%', top: '16%', size: 1.3, color: STAR_COLOR_BASE_A, baseOpacity: 0.24, animated: false },
+  { tier: 1, right: '15%', top: '36%', size: 1.2, color: STAR_COLOR_BASE_B, baseOpacity: 0.22, animated: false },
+];
+
+function StarDot({ d, tierMultiplier }) {
+  const twinkleValue = useRef(new Animated.Value(d.baseOpacity)).current;
+
+  useEffect(() => {
+    if (!d.animated) return;
+
+    const peak = Math.min(1, d.baseOpacity + 0.15);
+    const trough = Math.max(0.05, d.baseOpacity - 0.15);
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(twinkleValue, {
+          toValue: peak,
+          duration: d.duration / 2,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(twinkleValue, {
+          toValue: trough,
+          duration: d.duration / 2,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const timeoutId = setTimeout(() => loop.start(), d.delay || 0);
+    return () => {
+      clearTimeout(timeoutId);
+      loop.stop();
+    };
+  }, [twinkleValue, d.animated, d.baseOpacity, d.duration, d.delay]);
+
+  // FIX: Nested opacity structure prevents JS and Native driver conflict
+  const wrapperOpacity = d.tier === 3 ? 1 : tierMultiplier;
+  const innerOpacity = d.animated ? twinkleValue : d.baseOpacity;
+  const positionStyle = { position: 'absolute', left: d.left, right: d.right, top: d.top };
+
+  if (d.tier === 3) {
+    return (
+      <Animated.View style={[positionStyle, { opacity: wrapperOpacity }]}>
+        <Animated.Text
+          style={[styles.starAccentGlyph, { fontSize: d.size, color: d.color, opacity: innerOpacity }]}
+        >
+          ✦
+        </Animated.Text>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View style={[positionStyle, { opacity: wrapperOpacity }]}>
+      <Animated.View
+        style={[
+          styles.starPinpoint,
+          { width: d.size, height: d.size, borderRadius: d.size / 2, backgroundColor: d.color, opacity: innerOpacity },
+        ]}
+      />
+    </Animated.View>
+  );
+}
+
+function StarField({ progressAnim }) {
+  const tier1Multiplier = progressAnim.interpolate({
+    inputRange: [0, 75, 88],
+    outputRange: [0, 0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const tier2Multiplier = progressAnim.interpolate({
+    inputRange: [0, 75, 88],
+    outputRange: [0.35, 0.35, 1],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <View style={styles.starContainer}>
+      {STAR_DATA.map((d, i) => (
+        <StarDot key={i} d={d} tierMultiplier={d.tier === 1 ? tier1Multiplier : tier2Multiplier} />
+      ))}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 6. MASTER CANVAS
 // ---------------------------------------------------------------------------
 export default function EclipseCanvas({ progress }) {
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -110,58 +270,34 @@ export default function EclipseCanvas({ progress }) {
     }).start();
   }, [progress, progressAnim]);
 
-  // Smooth shadow traverse across the moon disc
   const shadowTranslateX = progressAnim.interpolate({
     inputRange: [0, 100],
     outputRange: [160, -10], 
     extrapolate: 'clamp',
   });
 
-  // Soft atmospheric shadow opacity for a realistic edge bleed
   const shadowOpacity = progressAnim.interpolate({
     inputRange: [0, 10, 90, 100],
     outputRange: [0, 0.92, 0.95, 0.98],
     extrapolate: 'clamp',
   });
 
-  // Full moon base fading to blood red eclipse
   const moonBaseColor = progressAnim.interpolate({
     inputRange: [0, 35, 75, 100],
     outputRange: ['#FFFFFF', '#ECE8F5', '#8B0000', '#2E0303'],
   });
 
-  const horizonLightOpacity = progressAnim.interpolate({
-    inputRange: [0, 80, 100],
-    outputRange: [1, 0.75, 0.45],
-    extrapolate: 'clamp',
-  });
-
   return (
     <View style={styles.canvasFrame}>
       
-      {/* ---------------- OLED-SAFE HORIZON LIGHTING ---------------- */}
-      <LinearGradient colors={['#000004', '#02020E', '#080A26', '#0F133D']} style={StyleSheet.absoluteFill} />
-      
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: horizonLightOpacity }]}>
-        <LinearGradient 
-          colors={['transparent', 'transparent', 'rgba(12, 16, 52, 0.3)', 'rgba(22, 26, 75, 0.8)']} 
-          locations={[0, 0.5, 0.75, 1]}
-          style={StyleSheet.absoluteFill} 
-        />
-      </Animated.View>
+      {/* ---------------- SKY ATMOSPHERE ---------------- */}
+      <SkyAtmosphere progressAnim={progressAnim} />
 
-      {/* ---------------- SCATTERED STARS ---------------- */}
-      <View style={styles.starContainer}>
-        <Text style={[styles.starSparkle, { left: '10%', top: '15%', fontSize: 9 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { right: '15%', top: '10%', fontSize: 11 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { left: '25%', top: '35%', fontSize: 7 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { right: '20%', top: '42%', fontSize: 10 }]}>✦</Text>
-        <Text style={[styles.starSparkle, { left: '80%', top: '22%', fontSize: 8 }]}>✦</Text>
-      </View>
+      {/* ---------------- LAYERED STARFIELD ---------------- */}
+      <StarField progressAnim={progressAnim} />
 
       {/* ---------------- MOON & ECLIPSE ---------------- */}
       <View style={styles.eclipseCenterFrame}>
-        {/* Base Moon Globe with Inner Clipped Shadow */}
         <Animated.View style={[styles.moonGlobe, { backgroundColor: moonBaseColor }]}>
           <Animated.View 
             style={[
@@ -182,8 +318,6 @@ export default function EclipseCanvas({ progress }) {
 
         <WindTurbine />
 
-        {/* Bridging tree — fills the empty middle-right gap between the
-            (now further-left) turbine and the right-side cabin cluster */}
         <SilhouettePine scale={1.0} left="58%" bottom={0} />
 
         <ForegroundCluster eclipseProgress={progressAnim} />
@@ -199,18 +333,19 @@ const styles = StyleSheet.create({
   canvasFrame: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
-    backgroundColor: '#000000',
+    backgroundColor: '#010206',
   },
   starContainer: {
     ...StyleSheet.absoluteFillObject,
   },
-  starSparkle: {
-    position: 'absolute',
-    color: '#FFFFFF',
-    opacity: 0.35,
-    textShadowColor: 'rgba(255, 255, 255, 0.4)',
+  starAccentGlyph: {
+    // position absolute moved to wrapper
+    textShadowColor: 'rgba(255, 255, 255, 0.35)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 2,
+  },
+  starPinpoint: {
+    // position absolute moved to wrapper
   },
   eclipseCenterFrame: {
     position: 'absolute',
@@ -228,7 +363,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    overflow: 'hidden', // Clips shadow strictly inside moon bounds
+    overflow: 'hidden',
   },
   earthShadowCircle: {
     position: 'absolute',
