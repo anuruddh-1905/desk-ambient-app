@@ -69,7 +69,8 @@ function WindTurbine() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. RIGHT FOREGROUND CLUSTER
+// 3. RIGHT FOREGROUND CLUSTER (toned down — outer/inner pine sizes reduced
+// so the cottage is framed, not drowned)
 // ---------------------------------------------------------------------------
 function ForegroundCluster({ eclipseProgress }) {
   // Awakens softly at the halfway point (50%), fully warming by totality
@@ -81,8 +82,8 @@ function ForegroundCluster({ eclipseProgress }) {
 
   return (
     <View style={styles.rightClusterWrapper}>
-      <SilhouettePine scale={1.5} right={100} bottom={0} />
-      <SilhouettePine scale={2.0} right={35} bottom={0} />
+      <SilhouettePine scale={1.1} right={95} bottom={0} />
+      <SilhouettePine scale={1.4} right={40} bottom={0} />
 
       <View style={styles.cottageBlock}>
         <View style={styles.cottageRoof} />
@@ -94,7 +95,7 @@ function ForegroundCluster({ eclipseProgress }) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. SKY ATMOSPHERE (Smooth 3-Phase Crossfade)
+// 4. SKY ATMOSPHERE (Smooth 3-Phase Crossfade) — unchanged
 // ---------------------------------------------------------------------------
 function SkyAtmosphere({ progressAnim }) {
   const phaseAOpacity = progressAnim.interpolate({
@@ -143,7 +144,7 @@ function SkyAtmosphere({ progressAnim }) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. STAR ENGINE (Balanced Spatial Coordinates & Reliable Visibility)
+// 5. STAR ENGINE (Balanced Spatial Coordinates & Reliable Visibility) — unchanged
 // ---------------------------------------------------------------------------
 const STAR_COLOR_BASE_A = '#E2E8F0';
 const STAR_COLOR_BASE_B = '#CBD5E1';
@@ -316,14 +317,17 @@ export default function EclipseCanvas({ progress }) {
         </Animated.View>
       </View>
 
-      {/* RURAL HORIZON */}
+      {/* RURAL HORIZON — recalibrated 3-tier depth gradient */}
       <View style={styles.horizonMatting}>
-        <SilhouettePine scale={0.7} left="6%" bottom={0} />
-        <SilhouettePine scale={0.9} left="16%" bottom={0} />
+        {/* Far distance (far left) */}
+        <SilhouettePine scale={0.45} left="5%" bottom={0} />
+        <SilhouettePine scale={0.60} left="13%" bottom={0} />
 
+        {/* Mid-distance turbine */}
         <WindTurbine />
 
-        <SilhouettePine scale={1.0} left="58%" bottom={0} />
+        {/* Transition zone (mid-right) */}
+        <SilhouettePine scale={0.75} left="62%" bottom={0} />
 
         <ForegroundCluster eclipseProgress={progressAnim} />
       </View>
@@ -381,6 +385,9 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 6,
   },
+  // Horizon grounding: bottom: '22%' matches foregroundContainer's
+  // height: '22%' exactly — both share the same baseline, so all
+  // silhouettes stand flush on the solid black base with no seam.
   horizonMatting: {
     position: 'absolute',
     bottom: '22%', 
@@ -396,7 +403,7 @@ const styles = StyleSheet.create({
   turbineWrapper: {
     position: 'absolute',
     bottom: 0,
-    left: '25%', 
+    left: '28%', 
     alignItems: 'center',
     justifyContent: 'flex-end',
     height: 120,
@@ -438,7 +445,7 @@ const styles = StyleSheet.create({
   cottageBlock: {
     position: 'absolute',
     bottom: 0,
-    right: '0%', 
+    right: '2%', 
     width: 45,
     height: 45,
     zIndex: 5,
