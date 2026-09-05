@@ -35,20 +35,59 @@ function SilhouettePine({ scale = 1, left, right, bottom = 0 }) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. WIND TURBINE
+// 2. WIND TURBINE (Dynamic psychological rotation decay)
 // ---------------------------------------------------------------------------
-function WindTurbine() {
+function WindTurbine({ progress = 0 }) {
   const spinAnim = useRef(new Animated.Value(0)).current;
+  const progressRef = useRef(progress);
+  const isMounted = useRef(true);
+
+  // Keep latest progress value fresh inside the recursive loop without hitching
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   useEffect(() => {
-    Animated.loop(
+    isMounted.current = true;
+
+    // Calculates rotation duration based on session phase:
+    // 0-20% = 6.5s (Steady work momentum)
+    // 20-50% = 9s (Comforting anchor)
+    // 50-75% = 13s (Decompression)
+    // 75-90% = 18s (Heavy lazy turn)
+    // 90-100% = 25s (Almost still, natural friction)
+    const getDuration = (p) => {
+      if (p < 20) return 6500;
+      if (p < 50) return 9000;
+      if (p < 75) return 13000;
+      if (p < 90) return 18000;
+      return 25000;
+    };
+
+    const runRotationCycle = () => {
+      if (!isMounted.current) return;
+
+      spinAnim.setValue(0);
+      const currentDuration = getDuration(progressRef.current);
+
       Animated.timing(spinAnim, {
         toValue: 1,
-        duration: 9000, 
+        duration: currentDuration,
         easing: Easing.linear,
         useNativeDriver: true,
-      })
-    ).start();
+      }).start(({ finished }) => {
+        if (finished && isMounted.current) {
+          runRotationCycle();
+        }
+      });
+    };
+
+    runRotationCycle();
+
+    return () => {
+      isMounted.current = false;
+      spinAnim.stopAnimation();
+    };
   }, [spinAnim]);
 
   const rotate = spinAnim.interpolate({
@@ -69,11 +108,9 @@ function WindTurbine() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. RIGHT FOREGROUND CLUSTER (toned down — outer/inner pine sizes reduced
-// so the cottage is framed, not drowned)
+// 3. RIGHT FOREGROUND CLUSTER
 // ---------------------------------------------------------------------------
 function ForegroundCluster({ eclipseProgress }) {
-  // Awakens softly at the halfway point (50%), fully warming by totality
   const windowGlowOpacity = eclipseProgress.interpolate({
     inputRange: [0, 50, 75, 100],
     outputRange: [0, 0, 0.45, 1.0],
@@ -82,8 +119,9 @@ function ForegroundCluster({ eclipseProgress }) {
 
   return (
     <View style={styles.rightClusterWrapper}>
-      <SilhouettePine scale={1.1} right={95} bottom={0} />
-      <SilhouettePine scale={1.4} right={40} bottom={0} />
+      <SilhouettePine scale={0.95} right={95} bottom={0} />
+      <SilhouettePine scale={1.45} right={45} bottom={0} />
+      <SilhouettePine scale={0.75} right={10} bottom={0} />
 
       <View style={styles.cottageBlock}>
         <View style={styles.cottageRoof} />
@@ -95,7 +133,7 @@ function ForegroundCluster({ eclipseProgress }) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. SKY ATMOSPHERE (Smooth 3-Phase Crossfade) — unchanged
+// 4. SKY ATMOSPHERE (Smooth 3-Phase Crossfade)
 // ---------------------------------------------------------------------------
 function SkyAtmosphere({ progressAnim }) {
   const phaseAOpacity = progressAnim.interpolate({
@@ -144,7 +182,7 @@ function SkyAtmosphere({ progressAnim }) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. STAR ENGINE (Balanced Spatial Coordinates & Reliable Visibility) — unchanged
+// 5. STAR ENGINE (Layered Magnitude Architecture)
 // ---------------------------------------------------------------------------
 const STAR_COLOR_BASE_A = '#E2E8F0';
 const STAR_COLOR_BASE_B = '#CBD5E1';
@@ -263,7 +301,7 @@ function StarField({ progressAnim }) {
 // ---------------------------------------------------------------------------
 // 6. MASTER CANVAS
 // ---------------------------------------------------------------------------
-export default function EclipseCanvas({ progress }) {
+export default function EclipseCanvas({ progress = 0 }) {
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -275,7 +313,7 @@ export default function EclipseCanvas({ progress }) {
     }).start();
   }, [progress, progressAnim]);
 
-  // Ends at 4 instead of 24, leaving a razor-thin, elegant crescent
+  // Ends at 4 instead of 24, leaving a razor-thin crescent
   const shadowTranslateX = progressAnim.interpolate({
     inputRange: [0, 100],
     outputRange: [160, 4],
@@ -288,7 +326,7 @@ export default function EclipseCanvas({ progress }) {
     extrapolate: 'clamp',
   });
 
-  // Shifts from pure starlight to a visible, rich blood moon
+  // Shifts from pure starlight to a visible blood moon
   const moonBaseColor = progressAnim.interpolate({
     inputRange: [0, 35, 75, 100],
     outputRange: ['#FFFFFF', '#EAE6F3', '#C53030', '#8B1E1E'],
@@ -317,17 +355,15 @@ export default function EclipseCanvas({ progress }) {
         </Animated.View>
       </View>
 
-      {/* RURAL HORIZON — recalibrated 3-tier depth gradient */}
+      {/* RURAL HORIZON */}
       <View style={styles.horizonMatting}>
-        {/* Far distance (far left) */}
         <SilhouettePine scale={0.45} left="5%" bottom={0} />
-        <SilhouettePine scale={0.60} left="13%" bottom={0} />
+        <SilhouettePine scale={0.70} left="13%" bottom={0} />
 
-        {/* Mid-distance turbine */}
-        <WindTurbine />
+        {/* Passing progress directly into WindTurbine to dynamically decay rotation speed */}
+        <WindTurbine progress={progress} />
 
-        {/* Transition zone (mid-right) */}
-        <SilhouettePine scale={0.75} left="62%" bottom={0} />
+        <SilhouettePine scale={0.75} left="58%" bottom={0} />
 
         <ForegroundCluster eclipseProgress={progressAnim} />
       </View>
@@ -385,9 +421,6 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 6,
   },
-  // Horizon grounding: bottom: '22%' matches foregroundContainer's
-  // height: '22%' exactly — both share the same baseline, so all
-  // silhouettes stand flush on the solid black base with no seam.
   horizonMatting: {
     position: 'absolute',
     bottom: '22%', 
