@@ -36,13 +36,16 @@ function computeVolumeB(progress) {
   return lerp(progress, 95, 100, 0.6, 0.0);
 }
 
-export function useAudioManager(progress) {
+// Added isMuted parameter (defaults to false if not provided)
+export function useAudioManager(progress, isMuted = false) {
   const soundARef = useRef(null);
   const soundBRef = useRef(null);
   const isMountedRef = useRef(true);
   const trackBStartedRef = useRef(false);
   const trackAPausedRef = useRef(false);
+  
   const lastAppliedProgressRef = useRef(-1);
+  const lastMutedRef = useRef(isMuted);
 
   // ---- Setup: audio mode + load & direct start ---------------------------
   useEffect(() => {
@@ -58,12 +61,13 @@ export function useAudioManager(progress) {
           playThroughEarpieceAndroid: false,
         });
 
-        // Track A plays immediately at 1.0 — the initial fade is baked into the audio file
+        // Track A plays immediately. 
+        // We use the initial isMuted state to prevent a loud blast if starting muted.
         const { sound: soundA } = await Audio.Sound.createAsync(
           TRACK_A_SOURCE,
           {
             isLooping: true,
-            volume: 1.0,
+            volume: isMuted ? 0.0 : 1.0,
             shouldPlay: true,
           }
         );
@@ -115,27 +119,41 @@ export function useAudioManager(progress) {
       cleanupTrack(soundARef);
       cleanupTrack(soundBRef);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only runs once on mount
 
-  // ---- Crossfade updates, throttled to whole-percent changes -------------
+  // ---- Crossfade updates, throttled to whole-percent changes OR mute toggles
   useEffect(() => {
     if (progress == null) return;
 
     const rounded = Math.round(progress);
-    if (rounded === lastAppliedProgressRef.current) return;
+    const muteToggled = lastMutedRef.current !== isMuted;
+
+    // Skip update if neither the rounded progress nor the mute state changed
+    if (rounded === lastAppliedProgressRef.current && !muteToggled) return;
+    
     lastAppliedProgressRef.current = rounded;
+    lastMutedRef.current = isMuted;
 
     async function applyCrossfade() {
-      const volA = computeVolumeA(rounded);
-      const volB = computeVolumeB(rounded);
+      // Calculate what the volume SHOULD be based on time
+      const targetVolA = computeVolumeA(rounded);
+      const targetVolB = computeVolumeB(rounded);
+
+      // Override to 0.0 if the user tapped the mute button
+      const effectiveVolA = isMuted ? 0.0 : targetVolA;
+      const effectiveVolB = isMuted ? 0.0 : targetVolB;
 
       try {
         if (soundARef.current && isMountedRef.current) {
-          await soundARef.current.setVolumeAsync(volA);
-          if (volA <= 0 && !trackAPausedRef.current) {
+          await soundARef.current.setVolumeAsync(effectiveVolA);
+          
+          // Only physically pause Track A if the session actually wants it silent at the end (88-100%).
+          // If the user just muted it manually, we keep it playing at 0 volume so it stays in sync.
+          if (targetVolA <= 0 && !trackAPausedRef.current) {
             trackAPausedRef.current = true;
             await soundARef.current.pauseAsync();
-          } else if (volA > 0 && trackAPausedRef.current) {
+          } else if (targetVolA > 0 && trackAPausedRef.current) {
             trackAPausedRef.current = false;
             await soundARef.current.playAsync();
           }
@@ -146,7 +164,7 @@ export function useAudioManager(progress) {
             trackBStartedRef.current = true;
             await soundBRef.current.playAsync();
           }
-          await soundBRef.current.setVolumeAsync(volB);
+          await soundBRef.current.setVolumeAsync(effectiveVolB);
         }
       } catch (error) {
         console.log('Audio crossfade update skipped quietly:', error);
@@ -154,7 +172,7 @@ export function useAudioManager(progress) {
     }
 
     applyCrossfade();
-  }, [progress]);
+  }, [progress, isMuted]); // Added isMuted to dependencies
 }
 
 export default useAudioManager;
