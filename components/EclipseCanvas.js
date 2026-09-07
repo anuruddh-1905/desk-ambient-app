@@ -35,14 +35,14 @@ function SilhouettePine({ scale = 1, left, right, bottom = 0 }) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. WIND TURBINE (Dynamic psychological rotation decay)
+// 2. WIND TURBINE (Smooth continuous decay logic)
 // ---------------------------------------------------------------------------
 function WindTurbine({ progress = 0 }) {
   const spinAnim = useRef(new Animated.Value(0)).current;
   const progressRef = useRef(progress);
   const isMounted = useRef(true);
 
-  // Keep latest progress value fresh inside the recursive loop without hitching
+  // Keep latest progress value fresh inside the recursive loop
   useEffect(() => {
     progressRef.current = progress;
   }, [progress]);
@@ -50,17 +50,14 @@ function WindTurbine({ progress = 0 }) {
   useEffect(() => {
     isMounted.current = true;
 
-    // Calculates rotation duration based on session phase:
-    // 0-20% = 6.5s (Steady work momentum)
-    // 20-50% = 9s (Comforting anchor)
-    // 50-75% = 13s (Decompression)
-    // 75-90% = 18s (Heavy lazy turn)
-    // 90-100% = 25s (Almost still, natural friction)
+    // Linearly interpolates the rotation duration so the blade speed
+    // decays imperceptibly smoothly across the entire session.
     const getDuration = (p) => {
-      if (p < 20) return 6500;
-      if (p < 50) return 9000;
-      if (p < 75) return 13000;
-      if (p < 90) return 18000;
+      if (p <= 0) return 6500;
+      if (p <= 25) return 6500 + ((p - 0) / 25) * (8000 - 6500);
+      if (p <= 50) return 8000 + ((p - 25) / 25) * (12000 - 8000);
+      if (p <= 75) return 12000 + ((p - 50) / 25) * (18000 - 12000);
+      if (p <= 100) return 18000 + ((p - 75) / 25) * (25000 - 18000);
       return 25000;
     };
 
@@ -111,9 +108,10 @@ function WindTurbine({ progress = 0 }) {
 // 3. RIGHT FOREGROUND CLUSTER
 // ---------------------------------------------------------------------------
 function ForegroundCluster({ eclipseProgress }) {
+  // Awakens at 50%, hits full brightness at 90%, and holds through 100%
   const windowGlowOpacity = eclipseProgress.interpolate({
-    inputRange: [0, 50, 75, 100],
-    outputRange: [0, 0, 0.45, 1.0],
+    inputRange: [0, 25, 50, 75, 90, 100],
+    outputRange: [0, 0, 0.15, 0.45, 1.0, 1.0],
     extrapolate: 'clamp',
   });
 
@@ -133,24 +131,24 @@ function ForegroundCluster({ eclipseProgress }) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. SKY ATMOSPHERE (Smooth 3-Phase Crossfade)
+// 4. SKY ATMOSPHERE
 // ---------------------------------------------------------------------------
 function SkyAtmosphere({ progressAnim }) {
   const phaseAOpacity = progressAnim.interpolate({
-    inputRange: [0, 68, 80],
-    outputRange: [1, 1, 0],
+    inputRange: [0, 25, 50, 75, 100],
+    outputRange: [1, 1, 0.5, 0, 0],
     extrapolate: 'clamp',
   });
 
   const phaseBOpacity = progressAnim.interpolate({
-    inputRange: [68, 80, 84, 92],
-    outputRange: [0, 1, 1, 0],
+    inputRange: [0, 25, 50, 75, 100],
+    outputRange: [0, 0, 0.5, 1, 0],
     extrapolate: 'clamp',
   });
 
   const phaseCOpacity = progressAnim.interpolate({
-    inputRange: [84, 92, 100],
-    outputRange: [0, 1, 1],
+    inputRange: [0, 25, 50, 75, 100],
+    outputRange: [0, 0, 0, 0, 1],
     extrapolate: 'clamp',
   });
 
@@ -182,7 +180,7 @@ function SkyAtmosphere({ progressAnim }) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. STAR ENGINE (Layered Magnitude Architecture)
+// 5. STAR ENGINE
 // ---------------------------------------------------------------------------
 const STAR_COLOR_BASE_A = '#E2E8F0';
 const STAR_COLOR_BASE_B = '#CBD5E1';
@@ -190,17 +188,12 @@ const STAR_COLOR_WARM = '#FEF3C7';
 const STAR_COLOR_COOL = '#BAE6FD';
 
 const STAR_DATA = [
-  // Tier 3 — Focal Accent Sparkles (2)
   { tier: 3, right: '14%', top: '10%', size: 9, color: STAR_COLOR_BASE_A, baseOpacity: 0.72, animated: false },
   { tier: 3, left: '16%', top: '18%', size: 8, color: STAR_COLOR_BASE_B, baseOpacity: 0.68, animated: false },
-
-  // Tier 2 — Mid-Luminance Stars (4: balanced left & right)
   { tier: 2, left: '28%', top: '12%', size: 2.5, color: STAR_COLOR_BASE_A, baseOpacity: 0.58, animated: false },
   { tier: 2, right: '28%', top: '30%', size: 2.5, color: STAR_COLOR_WARM, baseOpacity: 0.55, animated: true, duration: 11000, delay: 400 },
   { tier: 2, left: '8%', top: '38%', size: 2.2, color: STAR_COLOR_COOL, baseOpacity: 0.52, animated: false },
   { tier: 2, right: '12%', top: '44%', size: 2.4, color: STAR_COLOR_BASE_B, baseOpacity: 0.56, animated: false },
-
-  // Tier 1 — Micro-Background (12: distributed with reliable 2px floor)
   { tier: 1, left: '7%', top: '14%', size: 1.8, color: STAR_COLOR_BASE_A, baseOpacity: 0.38, animated: false },
   { tier: 1, left: '22%', top: '32%', size: 2.0, color: STAR_COLOR_BASE_B, baseOpacity: 0.40, animated: true, duration: 8000, delay: 0 },
   { tier: 1, left: '38%', top: '8%', size: 1.8, color: STAR_COLOR_BASE_A, baseOpacity: 0.36, animated: false },
@@ -277,22 +270,16 @@ function StarDot({ d, tierMultiplier }) {
 }
 
 function StarField({ progressAnim }) {
-  const tier1Multiplier = progressAnim.interpolate({
-    inputRange: [0, 75, 100],
-    outputRange: [0.45, 0.55, 1.0],
-    extrapolate: 'clamp',
-  });
-
-  const tier2Multiplier = progressAnim.interpolate({
-    inputRange: [0, 75, 100],
-    outputRange: [0.65, 0.75, 1.0],
+  const starVisibilityMultiplier = progressAnim.interpolate({
+    inputRange: [0, 25, 50, 75, 100],
+    outputRange: [0.20, 0.35, 0.55, 0.80, 1.0],
     extrapolate: 'clamp',
   });
 
   return (
     <View style={styles.starContainer}>
       {STAR_DATA.map((d, i) => (
-        <StarDot key={i} d={d} tierMultiplier={d.tier === 1 ? tier1Multiplier : tier2Multiplier} />
+        <StarDot key={i} d={d} tierMultiplier={starVisibilityMultiplier} />
       ))}
     </View>
   );
@@ -313,23 +300,18 @@ export default function EclipseCanvas({ progress = 0 }) {
     }).start();
   }, [progress, progressAnim]);
 
-  // Ends at 4 instead of 24, leaving a razor-thin crescent
+  // Master Moon Shadow Traverse (Changed starting value from 160 to 180 to clear the disk completely)
   const shadowTranslateX = progressAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: [160, 4],
+    inputRange: [0, 25, 50, 75, 100],
+    outputRange: [180, 120, 80, 30, 4],
     extrapolate: 'clamp',
   });
 
-  const shadowOpacity = progressAnim.interpolate({
-    inputRange: [0, 10, 90, 100],
-    outputRange: [0, 0.94, 0.96, 0.97],
-    extrapolate: 'clamp',
-  });
-
-  // Shifts from pure starlight to a visible blood moon
+  // Shifts from pure starlight to a visible, rich copper blood moon
   const moonBaseColor = progressAnim.interpolate({
-    inputRange: [0, 35, 75, 100],
-    outputRange: ['#FFFFFF', '#EAE6F3', '#C53030', '#8B1E1E'],
+    inputRange: [0, 25, 50, 75, 100],
+    outputRange: ['#FFFFFF', '#FFFFFF', '#EAE6F3', '#C53030', '#8B1E1E'],
+    extrapolate: 'clamp',
   });
 
   return (
@@ -346,10 +328,7 @@ export default function EclipseCanvas({ progress = 0 }) {
           <Animated.View 
             style={[
               styles.earthShadowCircle, 
-              { 
-                opacity: shadowOpacity,
-                transform: [{ translateX: shadowTranslateX }] 
-              }
+              { transform: [{ translateX: shadowTranslateX }] }
             ]} 
           />
         </Animated.View>
@@ -360,7 +339,6 @@ export default function EclipseCanvas({ progress = 0 }) {
         <SilhouettePine scale={0.45} left="5%" bottom={0} />
         <SilhouettePine scale={0.70} left="13%" bottom={0} />
 
-        {/* Passing progress directly into WindTurbine to dynamically decay rotation speed */}
         <WindTurbine progress={progress} />
 
         <SilhouettePine scale={0.75} left="58%" bottom={0} />
@@ -414,12 +392,7 @@ const styles = StyleSheet.create({
     width: 180, 
     height: 180,
     borderRadius: 90,
-    backgroundColor: '#030514', 
-    shadowColor: '#000000',
-    shadowOffset: { width: -8, height: 0 },
-    shadowOpacity: 0.95,
-    shadowRadius: 14,
-    elevation: 6,
+    backgroundColor: '#010206',
   },
   horizonMatting: {
     position: 'absolute',

@@ -10,6 +10,7 @@ import {
   StatusBar 
 } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
+import { Feather } from '@expo/vector-icons';
 
 // Components
 import ThemeSelector from '../components/ThemeSelector';
@@ -22,8 +23,6 @@ import { useAudioManager } from '../hooks/useAudioManager';
 
 /**
  * ActiveSession Component
- * Extracted so the audio manager and timer engine only mount (and play audio)
- * when the session is actually running. When this unmounts, audio stops.
  */
 const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
   const { progress, isCompleted } = useTimerEngine(
@@ -36,6 +35,11 @@ const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
 
   // Audio engine now mounts ONLY when the timer is active
   useAudioManager(progress);
+
+  // Local UI state for toggles 
+  // (You will need to pass these to your audio/timer hooks to actually pause things later)
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
 
   const renderActiveCanvas = () => {
     switch(activeTheme) {
@@ -53,10 +57,28 @@ const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
       
       {renderActiveCanvas()}
       
-      <View style={styles.minimalExitWrapper}>
+      {/* Bottom Right Controls */}
+      <View style={styles.controlsWrapper}>
+        <TouchableOpacity 
+          style={styles.iconButton} 
+          onPress={() => setIsMuted(!isMuted)}
+          activeOpacity={0.6}
+        >
+          <Feather name={isMuted ? "volume-x" : "volume-2"} size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.iconButton} 
+          onPress={() => setIsPaused(!isPaused)}
+          activeOpacity={0.6}
+        >
+          <Feather name={isPaused ? "play" : "pause"} size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+
         <TouchableOpacity 
           style={styles.exitButton} 
           onPress={onExit}
+          activeOpacity={0.6}
         >
           <Text style={styles.exitButtonText}>END SESSION</Text>
         </TouchableOpacity>
@@ -273,18 +295,26 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 2,
   },
-  minimalExitWrapper: {
+  controlsWrapper: {
     position: 'absolute',
-    bottom: 10,
+    bottom: 16,
     right: 24,
     zIndex: 99,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    opacity: 0.35,
+    padding: 10,
+    marginRight: 8,
   },
   exitButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 6,
+    marginLeft: 8,
   },
   exitButtonText: {
     color: 'rgba(255,255,255,0.3)',
