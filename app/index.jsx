@@ -25,21 +25,22 @@ import { useAudioManager } from '../hooks/useAudioManager';
  * ActiveSession Component
  */
 const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
+  // Local UI state for toggles 
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Pass the isPaused flag into the timer engine to freeze time
   const { progress, isCompleted } = useTimerEngine(
     hours, 
     minutes, 
     seconds, 
     true, 
+    isPaused, 
     () => { console.log("Session completed."); }
   );
 
-  // Audio engine now mounts ONLY when the timer is active
-  useAudioManager(progress);
-
-  // Local UI state for toggles 
-  // (You will need to pass these to your audio/timer hooks to actually pause things later)
-  const [isMuted, setIsMuted] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
+  // Pass the isMuted flag into the audio manager to silence playback
+  useAudioManager(progress, isMuted);
 
   const renderActiveCanvas = () => {
     switch(activeTheme) {
