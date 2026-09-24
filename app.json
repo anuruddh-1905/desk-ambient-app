@@ -2,7 +2,7 @@
   "expo": {
     "name": "Aera",
     "slug": "desk-ambient-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "deskambientapp",
@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.anuruddh.deskambientapp",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/icon.png"
