@@ -19,14 +19,12 @@ import EclipseCanvas from '../components/EclipseCanvas';
 
 // Hooks
 import { useTimerEngine } from '../hooks/useTimerEngine';
-import { useAudioManager } from '../hooks/useAudioManager';
 
 /**
  * ActiveSession Component
  */
 const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
   // Local UI state for toggles 
-  const [isMuted, setIsMuted] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
 
   // Pass the isPaused flag into the timer engine to freeze time
@@ -38,9 +36,6 @@ const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
     isPaused, 
     () => { console.log("Session completed."); }
   );
-
-  // Pass the isMuted flag into the audio manager to silence playback
-  useAudioManager(progress, isMuted);
 
   const renderActiveCanvas = () => {
     switch(activeTheme) {
@@ -60,14 +55,6 @@ const ActiveSession = ({ hours, minutes, seconds, activeTheme, onExit }) => {
       
       {/* Bottom Right Controls */}
       <View style={styles.controlsWrapper}>
-        <TouchableOpacity 
-          style={styles.iconButton} 
-          onPress={() => setIsMuted(!isMuted)}
-          activeOpacity={0.6}
-        >
-          <Feather name={isMuted ? "volume-x" : "volume-2"} size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-
         <TouchableOpacity 
           style={styles.iconButton} 
           onPress={() => setIsPaused(!isPaused)}
